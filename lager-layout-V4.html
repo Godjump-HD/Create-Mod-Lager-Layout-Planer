@@ -1,1 +1,1263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Create Mod Fabrik Sim</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06090e; --s1:#0c1119; --s2:#111926; --bd:#1c2a3a;
+  --or:#f97316; --bl:#38bdf8; --gn:#22c55e; --ye:#facc15;
+  --re:#ef4444; --pu:#a78bfa; --gy:#475569;
+  --tx:#c8d5e0; --dm:#5a7080;
+  --f:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--f);}
+body{display:flex;flex-direction:column;}
 
+/* ─ HEADER ─ */
+header{height:42px;background:var(--s1);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:6px;padding:0 10px;flex-shrink:0;z-index:100;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:19px;color:var(--or);letter-spacing:2px;white-space:nowrap;}
+.logo small{font-family:var(--f);font-size:9px;color:var(--dm);letter-spacing:0;margin-left:5px;}
+.sep{width:1px;height:18px;background:var(--bd);}
+button{background:none;border:1px solid var(--bd);color:var(--dm);border-radius:4px;
+  padding:3px 8px;font-size:10px;cursor:pointer;font-family:var(--f);transition:all .1s;white-space:nowrap;}
+button:hover{border-color:var(--or);color:var(--or);background:#f9731610;}
+button.active{border-color:var(--gn);color:var(--gn);background:#22c55e10;}
+.spacer{flex:1;}
+.info{font-size:9px;color:var(--dm);padding:0 8px;border-left:1px solid var(--bd);}
+.info b{color:var(--tx);}
+
+/* ─ BODY ─ */
+.body{display:flex;flex:1;overflow:hidden;}
+
+/* ─ SIDEBAR ─ */
+aside{width:180px;background:var(--s1);border-right:1px solid var(--bd);
+  overflow-y:auto;padding:6px;flex-shrink:0;}
+aside::-webkit-scrollbar{width:3px;}
+aside::-webkit-scrollbar-thumb{background:var(--bd);}
+.cat{font-size:8px;color:var(--dm);letter-spacing:3px;padding:8px 3px 3px;}
+.tool{display:flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:6px;
+  padding:5px 7px;margin-bottom:3px;cursor:pointer;transition:all .1s;background:var(--s2);user-select:none;}
+.tool:hover{transform:translateX(2px);border-color:var(--or);}
+.tool .ic{font-size:15px;flex-shrink:0;}
+.tool .nm{font-size:10px;font-weight:700;}
+.tool .ds{font-size:8px;color:var(--dm);}
+.tool .rt{font-size:8px;color:var(--ye);}
+
+/* ─ CANVAS ─ */
+main{flex:1;position:relative;overflow:hidden;}
+#bg,#sim{position:absolute;inset:0;pointer-events:none;}
+#overlay{position:absolute;inset:0;overflow:visible;pointer-events:none;}
+#world{position:absolute;top:0;left:0;transform-origin:0 0;}
+
+/* ─ CONVEYOR BELT ─ */
+.belt{
+  position:absolute;border-radius:4px;
+  background:var(--s2);border:2px solid var(--or);
+  cursor:move;user-select:none;overflow:hidden;
+  transition:border-color .1s,box-shadow .1s;
+}
+.belt.hl{border-color:var(--ye);box-shadow:0 0 10px #facc1555;}
+.belt.sel{border-color:#fff;box-shadow:0 0 0 2px var(--or);}
+.belt.jam{border-color:var(--re)!important;box-shadow:0 0 12px #ef444455!important;}
+/* animated stripes */
+.belt-stripe{position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,#f9731614 0,#f9731614 5px,transparent 5px,transparent 13px);
+  animation:bfwd .5s linear infinite;}
+.belt-stripe.rev{animation:brev .5s linear infinite;}
+.belt-stripe.stop{animation:none;opacity:.3;}
+@keyframes bfwd{to{background-position:18px 0;}}
+@keyframes brev{to{background-position:-18px 0;}}
+/* chain connect tabs */
+.tab{position:absolute;width:8px;height:60%;background:var(--or);
+  border-radius:2px;opacity:.6;cursor:crosshair;z-index:5;transition:opacity .1s;top:20%;}
+.tab:hover,.tab.hi{opacity:1;background:var(--ye);}
+.tab.L{left:-4px;}
+.tab.R{right:-4px;}
+.tab.T{top:-4px;left:20%;width:60%;height:8px;}
+.tab.B{bottom:-4px;left:20%;width:60%;height:8px;}
+.belt-dir{position:absolute;top:1px;right:3px;font-size:9px;color:var(--or);pointer-events:none;line-height:1;}
+.belt-name{position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:7px;color:var(--dm);pointer-events:none;}
+
+/* ─ STANDARD BLOCK ─ */
+.block{
+  position:absolute;border-radius:8px;background:var(--s1);
+  border:1.5px solid currentColor;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:7px 8px;text-align:center;cursor:move;user-select:none;
+  transition:box-shadow .12s,filter .12s;overflow:visible;
+}
+.block.sel{box-shadow:0 0 0 2px var(--or),0 0 18px #f9731633;}
+.block.jam{animation:jam .65s ease-in-out infinite;}
+.block.run{filter:brightness(1.18);}
+@keyframes jam{0%,100%{box-shadow:0 0 0 2px var(--re),0 0 6px #ef444433;}
+               50%{box-shadow:0 0 0 2px var(--re),0 0 22px #ef4444aa;}}
+.bic{font-size:20px;line-height:1;}
+.blbl{font-size:9px;font-weight:700;margin-top:3px;background:transparent;border:none;
+  outline:none;font-family:var(--f);text-align:center;width:100%;color:inherit;cursor:text;}
+.bsub{font-size:7px;color:var(--dm);margin-top:1px;}
+.bbar{width:86%;height:3px;background:#1a2535;border-radius:2px;margin-top:4px;overflow:hidden;}
+.bfil{height:100%;border-radius:2px;transition:width .25s,background .25s;}
+.bcnt{font-size:7px;color:var(--dm);margin-top:2px;}
+/* ports */
+.port{position:absolute;width:10px;height:10px;border-radius:50%;
+  border:2px solid var(--gy);background:var(--s2);cursor:crosshair;z-index:10;transition:all .1s;}
+.port:hover,.port.hi{border-color:var(--gn)!important;background:var(--gn);transform:scale(1.35)!important;}
+.port.R{right:-5px;top:50%;transform:translateY(-50%);}
+.port.L{left:-5px;top:50%;transform:translateY(-50%);}
+.port.B{bottom:-5px;left:50%;transform:translateX(-50%);}
+.port.T{top:-5px;left:50%;transform:translateX(-50%);}
+/* resize */
+.rh{position:absolute;bottom:-4px;right:-4px;width:11px;height:11px;cursor:se-resize;z-index:15;
+  border-right:2px solid var(--or);border-bottom:2px solid var(--or);opacity:0;transition:opacity .1s;}
+.block:hover .rh,.block.sel .rh,.belt:hover .rh,.belt.sel .rh{opacity:1;}
+
+/* ─ CTX ─ */
+#ctx{position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:7px;
+  padding:4px;z-index:9999;min-width:160px;box-shadow:0 12px 40px #0009;display:none;}
+.ci{padding:5px 10px;font-size:10px;cursor:pointer;border-radius:4px;color:var(--dm);}
+.ci:hover{background:var(--s2);color:var(--tx);}
+.ci.r:hover{color:var(--re);}
+.csep{height:1px;background:var(--bd);margin:3px 0;}
+
+/* ─ MINIMAP ─ */
+#mm{position:absolute;bottom:44px;right:10px;width:145px;height:82px;
+  background:var(--s1);border:1px solid var(--bd);border-radius:6px;overflow:hidden;opacity:.82;}
+
+/* ─ HELP ─ */
+#help{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  background:var(--s1);border:1px solid var(--bd);border-radius:5px;
+  padding:3px 12px;font-size:9px;color:var(--dm);pointer-events:none;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CREATE MOD SIM <small>GodjumpHD</small></div>
+  <div class="sep"></div>
+  <button class="active" id="btnRun" onclick="toggleRun()">▶ Läuft</button>
+  <button onclick="doStep()">⏭ Step</button>
+  <div class="sep"></div>
+  <span style="font-size:9px;color:var(--dm)">Speed:</span>
+  <button onclick="setSpd(0.5)">½×</button>
+  <button onclick="setSpd(1)" class="active">1×</button>
+  <button onclick="setSpd(2)">2×</button>
+  <button onclick="setSpd(4)">4×</button>
+  <div class="sep"></div>
+  <button onclick="zIn()">＋</button>
+  <span id="zlbl" style="font-size:10px;color:var(--dm);min-width:36px;text-align:center">100%</span>
+  <button onclick="zOut()">－</button>
+  <button onclick="zReset()">⊙</button>
+  <div class="sep"></div>
+  <button onclick="loadEx()">📦 Beispiel</button>
+  <button onclick="clearAll()" style="color:#ef444877;border-color:#ef444433">🗑 Clear</button>
+  <div class="spacer"></div>
+  <div class="info">Produziert: <b id="iP">0</b></div>
+  <div class="info">Staus: <b id="iJ" style="color:var(--re)">0</b></div>
+  <div class="info">Lager: <b id="iS">0</b></div>
+  <button onclick="exportS()">💾</button>
+  <button onclick="document.getElementById('iF').click()">📂</button>
+  <input id="iF" type="file" accept=".json" style="display:none" onchange="importS(event)">
+</header>
+
+<div class="body">
+  <aside id="sb"></aside>
+  <main id="main"
+    onmousedown="mDown(event)" onmousemove="mMove(event)" onmouseup="mUp(event)"
+    onwheel="mWheel(event)" ondragover="event.preventDefault()" ondrop="mDrop(event)"
+    oncontextmenu="event.preventDefault()">
+    <canvas id="bg"></canvas>
+    <canvas id="sim"></canvas>
+    <svg id="overlay" xmlns="http://www.w3.org/2000/svg">
+      <defs id="defs"></defs>
+      <g id="chainLines"></g>
+      <g id="wires"></g>
+      <g id="tmpLine"></g>
+    </svg>
+    <div id="world"></div>
+    <canvas id="mm"></canvas>
+    <div id="help">Sidebar: Block hinzufügen · Belt-Tabs (orange) ziehen = Kette · Ports (grün) ziehen = Verbindung · Alt+Drag = Pan · Scroll = Zoom · Entf = Löschen · Rechtsklick = Optionen</div>
+  </main>
+</div>
+<div id="ctx"></div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════════════════
+//  DEFINITIONS
+// ════════════════════════════════════════════════════════════
+const COL = {or:'#f97316',bl:'#38bdf8',gn:'#22c55e',ye:'#facc15',re:'#ef4444',pu:'#a78bfa',gy:'#475569',wh:'#c8d5e0'};
+
+// Belt: a conveyor segment, placed as a block but managed differently
+// Connections: wires between ports; chains between belt tabs
+// Simulation: items travel slot-by-slot on chains; wires transfer items point-to-point
+
+const DEFS = {
+  // ── BELTS (special) ──
+  belt:{em:'▬',nm:'Förderband',ds:'Segment · Ketten verbinden',col:'or',cat:'belt',w:130,h:38,slots:4,speed:2},
+  // ── MACHINES ──
+  farm: {em:'🌾',nm:'Farm',       ds:'Produziert Weizen',  col:'gn', cat:'machine', w:110,h:78, rate:1.2, sym:'🌾'},
+  mine: {em:'⛏️',nm:'Mine',       ds:'Produziert Erze',    col:'gy', cat:'machine', w:110,h:78, rate:0.7, sym:'🪨'},
+  press:{em:'🔨',nm:'Presse',     ds:'Produziert Platten', col:'gy', cat:'machine', w:110,h:78, rate:0.5, sym:'🟫'},
+  // ── FROGPORTS ──
+  fpin: {em:'🐸',nm:'Frogport IN', ds:'Nimmt Items vom Band', col:'or',cat:'frogport',dir:'in', w:95,h:75, cap:20},
+  fpout:{em:'🐸',nm:'Frogport OUT',ds:'Gibt Items aufs Band',  col:'bl',cat:'frogport',dir:'out',w:95,h:75, cap:20},
+  // ── STORAGE ──
+  vault: {em:'🗄️',nm:'Vault',         ds:'Hauptlager',      col:'gn',cat:'storage',w:110,h:78,cap:128},
+  barrel:{em:'🛢️',nm:'Puffer Barrel',  ds:'Kleines Lager',   col:'ye',cat:'storage',w:110,h:78,cap:32},
+  // ── PROCESSING ──
+  depot: {em:'🏭',nm:'Verarbeitungsstation',ds:'IN → verarbeiten → OUT',col:'pu',cat:'proc',w:120,h:82,cap:8,procT:1.8},
+  // ── SINKS ──
+  player:{em:'🧑‍🎮',nm:'Spieler',   ds:'Nimmt Items ab',   col:'pu',cat:'sink',w:100,h:68},
+  trash: {em:'🗑️',nm:'Müll',       ds:'Vernichtet Items', col:'gy',cat:'sink',w:100,h:68},
+};
+
+const GROUPS=[
+  {t:'— FÖRDERBAND —', k:['belt']},
+  {t:'— MASCHINEN —',  k:['farm','mine','press']},
+  {t:'— FROGPORTS —',  k:['fpin','fpout']},
+  {t:'— LAGER —',      k:['vault','barrel']},
+  {t:'— VERARBEITUNG —',k:['depot']},
+  {t:'— ZIELE —',      k:['player','trash']},
+];
+
+// ════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════
+let blocks=[], chains=[], wires=[], uid=1;
+let vp={x:60,y:70,z:1};
+let sel=null, dragging=null, dragOff={x:0,y:0}, resizing=null;
+let panning=false, panSt={};
+let portFrom=null;   // {bid, side:'L'|'R'|'T'|'B', role:'out'|'in'}
+let tabFrom=null;    // {bid, side:'L'|'R'|'T'|'B'}
+let dragType=null, ctxTgt=null;
+let running=true, speed=1, lastT=null;
+let totalProd=0;
+
+// ════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ════════════════════════════════════════════════════════════
+(function buildSB(){
+  const sb=document.getElementById('sb');
+  GROUPS.forEach(g=>{
+    const c=document.createElement('div');c.className='cat';c.textContent=g.t;sb.appendChild(c);
+    g.k.forEach(k=>{
+      const d=DEFS[k], el=document.createElement('div');el.className='tool';el.draggable=true;
+      const extra=d.rate?`<div class="rt">⚡${d.rate}/s</div>`:d.procT?`<div class="rt">⏱${d.procT}s</div>`:'';
+      el.innerHTML=`<div class="ic">${d.em}</div><div><div class="nm" style="color:${COL[d.col]}">${d.nm}</div><div class="ds">${d.ds}</div>${extra}</div>`;
+      el.addEventListener('click',()=>addBlock(k));
+      el.addEventListener('dragstart',()=>dragType=k);
+      sb.appendChild(el);
+    });
+  });
+})();
+
+// SVG markers
+(function mkMarkers(){
+  const d=document.getElementById('defs');
+  Object.entries(COL).forEach(([n,c])=>{
+    d.innerHTML+=`<marker id="ar-${n}" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,1 L0,5 L6,3z" fill="${c}"/></marker>`;
+  });
+})();
+
+// ════════════════════════════════════════════════════════════
+//  VIEWPORT
+// ════════════════════════════════════════════════════════════
+const world=()=>document.getElementById('world');
+function applyVP(){
+  world().style.transform=`translate(${vp.x}px,${vp.y}px) scale(${vp.z})`;
+  document.getElementById('zlbl').textContent=Math.round(vp.z*100)+'%';
+  drawBG(); drawChainLines(); drawWires();
+}
+function w2s(x,y){return{x:x*vp.z+vp.x,y:y*vp.z+vp.y};}
+function s2w(x,y){return{x:(x-vp.x)/vp.z,y:(y-vp.y)/vp.z};}
+
+function drawBG(){
+  const c=document.getElementById('bg'),m=document.getElementById('main');
+  c.width=m.clientWidth;c.height=m.clientHeight;
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+  const g=40*vp.z, ox=((vp.x%g)+g)%g, oy=((vp.y%g)+g)%g;
+  ctx.strokeStyle='#0d1520';ctx.lineWidth=1;
+  for(let x=ox;x<c.width;x+=g){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
+  for(let y=oy;y<c.height;y+=g){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
+  const mg=g*5, mox=((vp.x%mg)+mg)%mg, moy=((vp.y%mg)+mg)%mg;
+  ctx.strokeStyle='#131f2e';
+  for(let x=mox;x<c.width;x+=mg){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
+  for(let y=moy;y<c.height;y+=mg){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
+}
+
+// ════════════════════════════════════════════════════════════
+//  BLOCKS
+// ════════════════════════════════════════════════════════════
+function newBlock(type,wx,wy){
+  const d=DEFS[type]; if(!d) return null;
+  const b={
+    id:uid++, type, x:Math.round(wx/10)*10, y:Math.round(wy/10)*10,
+    w:d.w, h:d.h, label:d.nm, col:d.col,
+    buf:[], outBuf:[], timer:0, procT:0, jammed:false, active:false,
+    // for belts:
+    chainId:null, dir:1, // dir: 1=→/↓  -1=←/↑
+    slots:d.slots||0,
+    // for belts items are on the chain, not in buf
+  };
+  blocks.push(b);
+  if(d.cat==='belt'){
+    // create solo chain
+    const ch={id:uid++, segs:[b.id], dir:1, items:[], vert:false};
+    chains.push(ch);
+    b.chainId=ch.id;
+  }
+  renderBlock(b);
+  return b;
+}
+
+function addBlock(type){
+  const m=document.getElementById('main');
+  const cx=s2w(m.clientWidth/2,m.clientHeight/2);
+  newBlock(type, cx.x-DEFS[type].w/2+(Math.random()-.5)*30, cx.y-DEFS[type].h/2+(Math.random()-.5)*30);
+}
+
+function getChain(id){return chains.find(c=>c.id===id)||chains.find(c=>c.segs.includes(id));}
+function getChainOfBlock(bid){const b=blocks.find(x=>x.id===bid);return b&&b.chainId?chains.find(c=>c.id===b.chainId):null;}
+
+function renderBlock(b){
+  const d=DEFS[b.type], col=COL[b.col]||'#64748b';
+  const old=document.getElementById('b'+b.id); if(old)old.remove();
+  const el=document.createElement('div');
+  el.id='b'+b.id;
+  el.style.cssText=`left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;`;
+
+  if(d.cat==='belt'){
+    el.className='belt';
+    const ch=getChainOfBlock(b.id);
+    const dir=ch?ch.dir:1;
+    const vert=ch?ch.vert:false;
+    el.innerHTML=`
+      <div class="belt-stripe" id="bs${b.id}"></div>
+      <div class="belt-dir" id="bd${b.id}">${vert?(dir===1?'↓':'↑'):(dir===1?'→':'←')}</div>
+      <div class="belt-name">${b.label}</div>
+      <div class="tab L" id="tL${b.id}" onmousedown="tabDown(event,${b.id},'L')"></div>
+      <div class="tab R" id="tR${b.id}" onmousedown="tabDown(event,${b.id},'R')"></div>
+      <div class="tab T" id="tT${b.id}" onmousedown="tabDown(event,${b.id},'T')"></div>
+      <div class="tab B" id="tB${b.id}" onmousedown="tabDown(event,${b.id},'B')"></div>
+      <div class="rh" onmousedown="resDown(event,${b.id})"></div>`;
+    el.addEventListener('mousedown',e=>bDown(e,b.id));
+    el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();showCtx(e,b.id,'belt');});
+  } else {
+    el.className='block';
+    el.style.color=col;
+    el.style.borderColor=col;
+    el.style.boxShadow=`0 0 14px ${col}18`;
+    const ports=buildPorts(b.type,b.id);
+    const bar=d.cap?`<div class="bbar"><div class="bfil" id="bf${b.id}" style="background:${col}"></div></div><div class="bcnt" id="bc${b.id}">0/${d.cap}</div>`:'';
+    el.innerHTML=`
+      <div class="bic">${d.em}</div>
+      <input class="blbl" id="bl${b.id}" value="${b.label}" style="color:${col}"
+        onchange="b=>blocks.find(x=>x.id==${b.id})&&(blocks.find(x=>x.id==${b.id}).label=this.value)"
+        onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
+      <div class="bsub">${d.ds}</div>
+      ${bar}${ports}
+      <div class="rh" onmousedown="resDown(event,${b.id})"></div>`;
+    el.addEventListener('mousedown',e=>bDown(e,b.id));
+    el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();showCtx(e,b.id,'block');});
+  }
+  world().appendChild(el);
+  updateBlockUI(b);
+}
+
+function buildPorts(type,bid){
+  const d=DEFS[type]; let p='';
+  // Machine: one output
+  if(d.cat==='machine') p+=`<div class="port R" id="pR${bid}" onmousedown="portDown(event,${bid},'R','out')"></div>`;
+  // Frogport IN: left=input from belt (connected via chain-dock), bottom=output to storage
+  if(d.cat==='frogport'&&d.dir==='in'){
+    p+=`<div class="port L" id="pL${bid}" onmousedown="portDown(event,${bid},'L','in')"></div>`;
+    p+=`<div class="port B" id="pB${bid}" onmousedown="portDown(event,${bid},'B','out')"></div>`;
+  }
+  // Frogport OUT: top=input from storage, right=output to belt
+  if(d.cat==='frogport'&&d.dir==='out'){
+    p+=`<div class="port T" id="pT${bid}" onmousedown="portDown(event,${bid},'T','in')"></div>`;
+    p+=`<div class="port R" id="pR${bid}" onmousedown="portDown(event,${bid},'R','out')"></div>`;
+  }
+  // Storage: left=in, right=out
+  if(d.cat==='storage'){
+    p+=`<div class="port L" id="pL${bid}" onmousedown="portDown(event,${bid},'L','in')"></div>`;
+    p+=`<div class="port R" id="pR${bid}" onmousedown="portDown(event,${bid},'R','out')"></div>`;
+    p+=`<div class="port B" id="pB${bid}" onmousedown="portDown(event,${bid},'B','out')"></div>`;
+    p+=`<div class="port T" id="pT${bid}" onmousedown="portDown(event,${bid},'T','in')"></div>`;
+  }
+  // Depot: left=in, right=out
+  if(d.cat==='proc'){
+    p+=`<div class="port L" id="pL${bid}" onmousedown="portDown(event,${bid},'L','in')"></div>`;
+    p+=`<div class="port R" id="pR${bid}" onmousedown="portDown(event,${bid},'R','out')"></div>`;
+  }
+  // Sink: left=in, top=in
+  if(d.cat==='sink'){
+    p+=`<div class="port L" id="pL${bid}" onmousedown="portDown(event,${bid},'L','in')"></div>`;
+    p+=`<div class="port T" id="pT${bid}" onmousedown="portDown(event,${bid},'T','in')"></div>`;
+  }
+  return p;
+}
+
+function setBlockPos(b){
+  const el=document.getElementById('b'+b.id); if(!el) return;
+  el.style.left=b.x+'px'; el.style.top=b.y+'px';
+  el.style.width=b.w+'px'; el.style.height=b.h+'px';
+}
+
+function updateBlockUI(b){
+  const d=DEFS[b.type], col=COL[b.col];
+  const el=document.getElementById('b'+b.id); if(!el) return;
+
+  if(d.cat==='belt'){
+    const ch=getChainOfBlock(b.id);
+    const jam=ch?ch.jammed:false;
+    el.className='belt'+(sel===b.id?' sel':'')+(jam?' jam':'');
+    const bs=document.getElementById('bs'+b.id);
+    if(bs){
+      if(jam){bs.className='belt-stripe stop';}
+      else{bs.className='belt-stripe'+(ch&&ch.dir===-1?' rev':'');}
+    }
+    const bd=document.getElementById('bd'+b.id);
+    if(bd&&ch){
+      bd.textContent=ch.vert?(ch.dir===1?'↓':'↑'):(ch.dir===1?'→':'←');
+    }
+  } else {
+    el.className='block'+(sel===b.id?' sel':'')+(b.jammed?' jam':'')+(b.active&&!b.jammed?' run':'');
+    const bf=document.getElementById('bf'+b.id);
+    if(bf&&d.cap){
+      const tot=(b.buf?.length||0)+(b.outBuf?.length||0);
+      const pct=Math.min(100,(tot/d.cap)*100);
+      bf.style.width=pct+'%';
+      bf.style.background=pct>80?COL.re:pct>55?COL.ye:col;
+    }
+    const bc=document.getElementById('bc'+b.id);
+    if(bc&&d.cap) bc.textContent=`${(b.buf?.length||0)+(b.outBuf?.length||0)}/${d.cap}`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  CHAINS — belt segments connected together
+//  A chain has segs:[bid,...] in order, items travel from index 0 → N (dir=1) or N → 0 (dir=-1)
+//  Item.pos: float 0..N  (0=first seg start, N=last seg end)
+//  Each segment contributes 1 unit of pos (= d.slots slots spread across it)
+// ════════════════════════════════════════════════════════════
+
+function connectBelts(aBid, aTab, bBid, bTab){
+  // aBid's aTab side connects to bBid's bTab side
+  // We join their chains. A's right/bottom connects to B's left/top (for dir=1)
+  const chA=getChainOfBlock(aBid), chB=getChainOfBlock(bBid);
+  if(!chA||!chB||chA===chB) return;
+
+  // Determine merge order: A end → B start
+  // aTab should be R or B (output side of A), bTab should be L or T (input side of B)
+  // Detect if this is a vertical connection
+  const vert=(aTab==='T'||aTab==='B'||bTab==='T'||bTab==='B');
+
+  // If aTab is the "end" of A's chain, merge A+B
+  const aIsEnd=(aTab==='R'||aTab==='B');
+  const bIsStart=(bTab==='L'||bTab==='T');
+
+  let segsA=chA.segs, segsB=chB.segs;
+  if(!aIsEnd) segsA=[...segsA].reverse();  // A's tab is start side, reverse
+  if(!bIsStart) segsB=[...segsB].reverse(); // B's tab is end side, reverse
+
+  const merged={id:uid++, segs:[...segsA,...segsB], dir:1, items:[
+    ...chA.items,
+    ...chB.items.map(i=>({...i,pos:i.pos+chA.segs.length}))
+  ], vert, jammed:false};
+
+  chains=chains.filter(c=>c!==chA&&c!==chB);
+  chains.push(merged);
+  // Update all block chainIds
+  merged.segs.forEach(id=>{const b=blocks.find(x=>x.id===id);if(b)b.chainId=merged.id;});
+
+  // Flash highlight
+  merged.segs.forEach(id=>{
+    const el=document.getElementById('b'+id);
+    if(el){el.classList.add('hl');setTimeout(()=>el.classList.remove('hl'),700);}
+  });
+  drawChainLines();
+}
+
+function disconnectFromChain(bid){
+  // Remove this segment from its chain, make it solo
+  const ch=getChainOfBlock(bid); if(!ch) return;
+  const idx=ch.segs.indexOf(bid); if(idx<0) return;
+  const left=ch.segs.slice(0,idx);
+  const right=ch.segs.slice(idx+1);
+  chains=chains.filter(c=>c!==ch);
+  if(left.length){
+    const cl={id:uid++,segs:left,dir:ch.dir,items:ch.items.filter(i=>i.pos<idx),vert:ch.vert,jammed:false};
+    chains.push(cl);left.forEach(id=>{const b=blocks.find(x=>x.id===id);if(b)b.chainId=cl.id;});
+  }
+  // solo
+  const cs={id:uid++,segs:[bid],dir:1,items:[],vert:false,jammed:false};
+  chains.push(cs);
+  const bk=blocks.find(x=>x.id===bid);if(bk)bk.chainId=cs.id;
+  if(right.length){
+    const cr={id:uid++,segs:right,dir:ch.dir,items:ch.items.filter(i=>i.pos>idx+1).map(i=>({...i,pos:i.pos-idx-1})),vert:ch.vert,jammed:false};
+    chains.push(cr);right.forEach(id=>{const b=blocks.find(x=>x.id===id);if(b)b.chainId=cr.id;});
+  }
+  drawChainLines();
+}
+
+// ════════════════════════════════════════════════════════════
+//  WIRES — point-to-point item transfer between blocks
+// ════════════════════════════════════════════════════════════
+function addWire(fromBid,fromSide,toBid,toSide){
+  if(fromBid===toBid) return;
+  if(wires.find(w=>w.from===fromBid&&w.fS===fromSide&&w.to===toBid&&w.tS===toSide)) return;
+  wires.push({id:uid++,from:fromBid,fS:fromSide,to:toBid,tS:toSide,items:[]});
+  drawWires();
+}
+
+function portCenter(bid,side){
+  const b=blocks.find(x=>x.id===bid); if(!b) return null;
+  const s=w2s(b.x,b.y), sw=b.w*vp.z, sh=b.h*vp.z;
+  if(side==='R') return{x:s.x+sw,   y:s.y+sh/2};
+  if(side==='L') return{x:s.x,       y:s.y+sh/2};
+  if(side==='B') return{x:s.x+sw/2, y:s.y+sh};
+  if(side==='T') return{x:s.x+sw/2, y:s.y};
+  return{x:s.x+sw/2,y:s.y+sh/2};
+}
+
+function bezPath(p1,s1,p2,s2){
+  const dx=Math.abs(p2.x-p1.x), dy=Math.abs(p2.y-p1.y);
+  const t=Math.max(dx,dy)*.45+35;
+  const cv=s=>{if(s==='R')return[t,0];if(s==='L')return[-t,0];if(s==='B')return[0,t];return[0,-t];};
+  const[cx1,cy1]=cv(s1);const[cx2,cy2]=cv(s2);
+  return`M${p1.x},${p1.y} C${p1.x+cx1},${p1.y+cy1} ${p2.x+cx2},${p2.y+cy2} ${p2.x},${p2.y}`;
+}
+
+function drawWires(){
+  const g=document.getElementById('wires'); g.innerHTML='';
+  wires.forEach(w=>{
+    const p1=portCenter(w.from,w.fS), p2=portCenter(w.to,w.tS); if(!p1||!p2) return;
+    const fb=blocks.find(x=>x.id===w.from);
+    const col=fb?COL[fb.col]:COL.gy;
+    const path=bezPath(p1,w.fS,p2,w.tS);
+    const el=document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('d',path); el.setAttribute('stroke',col);
+    el.setAttribute('stroke-width',Math.max(1.5,2*vp.z));
+    el.setAttribute('fill','none');
+    el.setAttribute('marker-end',`url(#ar-${fb?.col||'gy'})`);
+    el.setAttribute('opacity','0.75');
+    el.style.pointerEvents='stroke'; el.style.cursor='pointer';
+    el.addEventListener('contextmenu',e=>{e.preventDefault();showCtx(e,w.id,'wire');});
+    g.appendChild(el);
+  });
+}
+
+function drawChainLines(){
+  const g=document.getElementById('chainLines'); g.innerHTML='';
+  chains.forEach(ch=>{
+    for(let i=0;i<ch.segs.length-1;i++){
+      const a=blocks.find(b=>b.id===ch.segs[i]);
+      const bk=blocks.find(b=>b.id===ch.segs[i+1]);
+      if(!a||!bk) continue;
+      // line from a's right/bottom center to b's left/top center
+      const vert=ch.vert;
+      const p1=w2s(vert?a.x+a.w/2:a.x+a.w, vert?a.y+a.h:a.y+a.h/2);
+      const p2=w2s(vert?bk.x+bk.w/2:bk.x,  vert?bk.y:bk.y+bk.h/2);
+      const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',p1.x);ln.setAttribute('y1',p1.y);
+      ln.setAttribute('x2',p2.x);ln.setAttribute('y2',p2.y);
+      ln.setAttribute('stroke',COL.or);
+      ln.setAttribute('stroke-width',Math.max(2.5,3.5*vp.z));
+      ln.setAttribute('opacity','0.55');
+      ln.setAttribute('stroke-dasharray',`${5*vp.z},${3*vp.z}`);
+      g.appendChild(ln);
+      // ⛓ icon
+      const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+      const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x',mx);txt.setAttribute('y',my-4*vp.z);
+      txt.setAttribute('fill',COL.or);txt.setAttribute('font-size',Math.max(8,11*vp.z));
+      txt.setAttribute('text-anchor','middle');txt.setAttribute('pointer-events','none');
+      txt.textContent='⛓'; g.appendChild(txt);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+//  SIMULATION
+// ════════════════════════════════════════════════════════════
+function simTick(dt){
+  const rdt=dt*speed;
+
+  // ── 1. MACHINES produce → inject onto wires ──
+  blocks.filter(b=>DEFS[b.type].cat==='machine').forEach(b=>{
+    const d=DEFS[b.type];
+    const outs=wires.filter(w=>w.from===b.id);
+    if(!outs.length){b.active=false;return;}
+    const full=outs.every(w=>w.items.length>=6);
+    if(full){b.jammed=true;b.active=false;return;}
+    b.jammed=false;b.active=true;
+    b.timer=(b.timer||0)+rdt;
+    if(b.timer>=1/d.rate){
+      b.timer=0;
+      const t=outs.find(w=>w.items.length<6);
+      if(t){t.items.push({id:uid++,t:0,sym:d.sym,col:COL[b.col]});totalProd++;}
+    }
+  });
+
+  // ── 2. MOVE wire items ──
+  wires.forEach(w=>{
+    const tb=blocks.find(x=>x.id===w.to), td=tb?DEFS[tb.type]:null;
+    w.items=w.items.filter(item=>{
+      item.t+=rdt*2.2;
+      if(item.t>=1){
+        if(!tb||!td) return false;
+        const d=DEFS[tb.type];
+        if(d.cat==='sink') return false; // consumed
+        if(d.cat==='belt'){
+          // inject onto chain at the segment
+          const ch=getChainOfBlock(tb.id);
+          if(ch&&ch.items.length<ch.segs.length*DEFS.belt.slots){
+            const segIdx=ch.segs.indexOf(tb.id);
+            const insertPos=segIdx+(ch.dir===1?0.1:0.9);
+            if(!ch.items.some(i=>Math.abs(i.pos-insertPos)<0.45)){
+              ch.items.push({id:uid++,pos:insertPos,sym:item.sym,col:item.col});
+            }
+          }
+          return false;
+        }
+        // into buffer
+        const cap=d.cap||999;
+        if((tb.buf?.length||0)+(tb.outBuf?.length||0)<cap){
+          tb.buf.push({id:uid++,sym:item.sym,col:item.col});
+          return false;
+        }
+        // full — bounce back (stall on wire)
+        item.t=0.98; return true;
+      }
+      return true;
+    });
+  });
+
+  // ── 3. MOVE chain items ──
+  chains.forEach(ch=>{
+    const N=ch.segs.length;
+    const spd=DEFS.belt.speed; // world-units per second
+    // Sort items in travel order (front first)
+    ch.items.sort((a,b2)=>ch.dir===1?b2.pos-a.pos:a.pos-b2.pos);
+    const GAP=0.5; // minimum spacing between items
+    let anyStalled=false;
+
+    ch.items.forEach((item,idx)=>{
+      const ahead=ch.items[idx-1]; // item ahead of us in travel direction
+      let stall=false;
+
+      // Check item ahead
+      if(ahead){
+        if(ch.dir===1 && item.pos >= ahead.pos-GAP){ stall=true; }
+        if(ch.dir===-1 && item.pos <= ahead.pos+GAP){ stall=true; }
+      }
+
+      // Check chain end
+      const atEnd=ch.dir===1 ? item.pos>=N-0.12 : item.pos<=0.12;
+      if(atEnd && !ahead){
+        // Try to deliver to a connected frogport IN (via wire from end-segment)
+        const endSeg=ch.segs[ch.dir===1?N-1:0];
+        const delivered=tryDeliverToFrogport(ch, item, endSeg);
+        if(delivered){ ch.items.splice(ch.items.indexOf(item),1); return; }
+        // Try deliver via wire from end belt to next block
+        const delivered2=tryDeliverViaBeltWire(ch,item,endSeg);
+        if(delivered2){ ch.items.splice(ch.items.indexOf(item),1); return; }
+        stall=true;
+      }
+
+      if(stall){ item.stalled=true; anyStalled=true; return; }
+      item.stalled=false;
+      item.pos+=ch.dir*spd*rdt;
+    });
+
+    ch.jammed=ch.items.length>0 && anyStalled && ch.items.every(i=>i.stalled);
+    // Update belt UI
+    ch.segs.forEach(id=>updateBlockUI(blocks.find(b=>b.id===id)||{}));
+  });
+
+  // ── 4. FROGPORT IN → storage via wire ──
+  blocks.filter(b=>DEFS[b.type].cat==='frogport'&&DEFS[b.type].dir==='in').forEach(fp=>{
+    const d=DEFS[fp.type];
+    fp.active=(fp.buf?.length||0)>0;
+    fp.jammed=(fp.buf?.length||0)>=(d.cap-2);
+    if(!(fp.buf?.length)) return;
+    const outs=wires.filter(w=>w.from===fp.id&&w.fS==='B');
+    fp.timer=(fp.timer||0)+rdt;
+    if(fp.timer>0.2){
+      fp.timer=0;
+      const t=outs.find(w=>w.items.length<5);
+      if(t){ t.items.push({id:uid++,t:0,...fp.buf.shift()}); }
+    }
+  });
+
+  // ── 5. FROGPORT OUT: pull from storage via wire, push onto belt ──
+  blocks.filter(b=>DEFS[b.type].cat==='frogport'&&DEFS[b.type].dir==='out').forEach(fp=>{
+    const d=DEFS[fp.type];
+    // Intake from wires into buffer
+    wires.filter(w=>w.to===fp.id&&w.tS==='T').forEach(w=>{
+      // items arrive via wire animation — handled above
+    });
+    fp.active=(fp.buf?.length||0)>0;
+    fp.jammed=(fp.buf?.length||0)>=(d.cap-2);
+    if(!(fp.buf?.length)) return;
+    // Push onto connected belt via R port wire
+    const outs=wires.filter(w=>w.from===fp.id&&w.fS==='R');
+    fp.timer=(fp.timer||0)+rdt;
+    if(fp.timer>0.25){
+      fp.timer=0;
+      const t=outs.find(w=>w.items.length<5);
+      if(t){ t.items.push({id:uid++,t:0,...fp.buf.shift()}); }
+    }
+  });
+
+  // ── 6. STORAGE: auto-push outBuf via wires ──
+  blocks.filter(b=>DEFS[b.type].cat==='storage').forEach(b=>{
+    b.active=(b.buf?.length||0)>0;
+    b.jammed=(b.buf?.length||0)>=(DEFS[b.type].cap-2);
+    if(!(b.buf?.length)) return;
+    // push to outBuf
+    if(!b.outBuf) b.outBuf=[];
+    if(b.outBuf.length<4 && b.buf.length>0) b.outBuf.push(b.buf.shift());
+    // push outBuf onto wires
+    const outs=wires.filter(w=>w.from===b.id&&(w.fS==='R'||w.fS==='B'));
+    b.timer=(b.timer||0)+rdt;
+    if(b.timer>0.3){b.timer=0;
+      const t=outs.find(w=>w.items.length<5);
+      if(t&&b.outBuf.length){t.items.push({id:uid++,t:0,...b.outBuf.shift()});}
+    }
+  });
+
+  // ── 7. DEPOT (processor) ──
+  blocks.filter(b=>DEFS[b.type].cat==='proc').forEach(b=>{
+    const d=DEFS[b.type];
+    b.active=(b.buf?.length||0)>0;
+    b.jammed=(b.buf?.length||0)>=(d.cap-1);
+    if(b.buf?.length>0){
+      b.procT=(b.procT||0)+rdt;
+      if(b.procT>=d.procT){
+        b.procT=0;
+        const item=b.buf.shift();
+        if(!b.outBuf)b.outBuf=[];
+        b.outBuf.push({...item,sym:'📦'});
+      }
+    }
+    if(b.outBuf?.length>0){
+      const outs=wires.filter(w=>w.from===b.id&&w.fS==='R');
+      b.timer=(b.timer||0)+rdt;
+      if(b.timer>0.3){b.timer=0;
+        const t=outs.find(w=>w.items.length<5);
+        if(t)t.items.push({id:uid++,t:0,...b.outBuf.shift()});
+      }
+    }
+  });
+
+  // ── 8. SINKS ──
+  blocks.filter(b=>DEFS[b.type].cat==='sink').forEach(b=>{b.buf=[];b.outBuf=[];});
+
+  // ── 9. Update all UI ──
+  blocks.forEach(b=>{if(DEFS[b.type].cat!=='belt')updateBlockUI(b);});
+  document.getElementById('iP').textContent=totalProd;
+  document.getElementById('iJ').textContent=blocks.filter(b=>b.jammed).length+chains.filter(c=>c.jammed).length;
+  document.getElementById('iS').textContent=blocks.reduce((a,b)=>a+(b.buf?.length||0)+(b.outBuf?.length||0),0);
+}
+
+function tryDeliverToFrogport(ch, item, segId){
+  // Is there a frogport IN whose L port is connected via wire FROM the belt's end?
+  const ws=wires.filter(w=>w.from===segId||w.to===segId);
+  for(const w of ws){
+    const target=blocks.find(b=>b.id===w.to);
+    if(!target) continue;
+    const d=DEFS[target.type];
+    if(d.cat==='frogport'&&d.dir==='in'&&(target.buf?.length||0)<d.cap){
+      if(!target.buf)target.buf=[];
+      target.buf.push({sym:item.sym,col:item.col});
+      return true;
+    }
+  }
+  return false;
+}
+
+function tryDeliverViaBeltWire(ch,item,segId){
+  // Wire from belt segment R/B port to another block
+  const outs=wires.filter(w=>w.from===segId&&(w.fS==='R'||w.fS==='B'));
+  for(const w of outs){
+    const tb=blocks.find(b=>b.id===w.to);if(!tb) continue;
+    const d=DEFS[tb.type];
+    if(d.cat==='sink') return true;
+    if(d.cat==='belt'){
+      const tch=getChainOfBlock(tb.id);
+      if(tch&&tch.items.length<tch.segs.length*DEFS.belt.slots){
+        const si=tch.segs.indexOf(tb.id);
+        const pos=si+(tch.dir===1?0.1:0.9);
+        if(!tch.items.some(i=>Math.abs(i.pos-pos)<0.45)){
+          tch.items.push({id:uid++,pos,sym:item.sym,col:item.col});
+          return true;
+        }
+      }
+    } else {
+      const cap=d.cap||999;
+      if((tb.buf?.length||0)<cap){
+        if(!tb.buf)tb.buf=[];
+        tb.buf.push({sym:item.sym,col:item.col});
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ════════════════════════════════════════════════════════════
+//  DRAW ITEMS
+// ════════════════════════════════════════════════════════════
+function drawItems(){
+  const c=document.getElementById('sim'), m=document.getElementById('main');
+  c.width=m.clientWidth; c.height=m.clientHeight;
+  const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+
+  // Chain items
+  chains.forEach(ch=>{
+    const N=ch.segs.length;
+    ch.items.forEach(item=>{
+      const segIdx=Math.min(Math.floor(item.pos),N-1);
+      const frac=item.pos-Math.floor(item.pos);
+      const seg=blocks.find(b=>b.id===ch.segs[segIdx]); if(!seg) return;
+      const wx=ch.vert?seg.x+seg.w/2:seg.x+frac*seg.w;
+      const wy=ch.vert?seg.y+frac*seg.h:seg.y+seg.h/2;
+      const sp=w2s(wx,wy);
+      paintItem(ctx,sp.x,sp.y,item.sym,item.col,item.stalled);
+    });
+  });
+
+  // Wire items
+  wires.forEach(w=>{
+    const p1=portCenter(w.from,w.fS), p2=portCenter(w.to,w.tS); if(!p1||!p2) return;
+    w.items.forEach(item=>{
+      const pos=bezPoint(p1,w.fS,p2,w.tS,item.t);
+      paintItem(ctx,pos.x,pos.y,item.sym,item.col,false);
+    });
+  });
+}
+
+function bezPoint(p1,s1,p2,s2,t){
+  const dx=Math.abs(p2.x-p1.x),dy=Math.abs(p2.y-p1.y),len=Math.max(dx,dy)*.45+35;
+  const cv=s=>{if(s==='R')return[len,0];if(s==='L')return[-len,0];if(s==='B')return[0,len];return[0,-len];};
+  const[cx1,cy1]=cv(s1);const[cx2,cy2]=cv(s2);
+  const u=1-t;
+  return{
+    x:u*u*u*p1.x+3*u*u*t*(p1.x+cx1)+3*u*t*t*(p2.x+cx2)+t*t*t*p2.x,
+    y:u*u*u*p1.y+3*u*u*t*(p1.y+cy1)+3*u*t*t*(p2.y+cy2)+t*t*t*p2.y
+  };
+}
+
+function paintItem(ctx,x,y,sym,col,stalled){
+  const z=vp.z, sz=Math.max(4,5.5*z);
+  ctx.globalAlpha=stalled?.35:.9;
+  const g=ctx.createRadialGradient(x,y,0,x,y,sz*2.8);
+  g.addColorStop(0,col+'bb');g.addColorStop(1,col+'00');
+  ctx.beginPath();ctx.arc(x,y,sz*2.8,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.arc(x,y,sz,0,Math.PI*2);
+  ctx.fillStyle=stalled?COL.re:col;ctx.fill();
+  if(z>0.45&&sym){
+    ctx.globalAlpha=stalled?.3:.95;
+    ctx.font=`${Math.max(7,9*z)}px serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(sym,x,y-sz*1.9);
+  }
+  ctx.globalAlpha=1;
+}
+
+// ════════════════════════════════════════════════════════════
+//  MINIMAP
+// ════════════════════════════════════════════════════════════
+function drawMM(){
+  const c=document.getElementById('mm'); if(!c) return;
+  c.width=c.parentElement.clientWidth; c.height=c.parentElement.clientHeight;
+  const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+  if(!blocks.length) return;
+  const xs=blocks.map(b=>b.x),ys=blocks.map(b=>b.y);
+  const xes=blocks.map(b=>b.x+b.w),yes=blocks.map(b=>b.y+b.h);
+  const mnX=Math.min(...xs)-20,mnY=Math.min(...ys)-20;
+  const mxX=Math.max(...xes)+20,mxY=Math.max(...yes)+20;
+  const sc=Math.min(c.width/(mxX-mnX),c.height/(mxY-mnY));
+  blocks.forEach(b=>{
+    const col=COL[b.col]||COL.gy;
+    ctx.fillStyle=b.jammed?COL.re+'66':col+'44';
+    ctx.strokeStyle=b.jammed?COL.re:col; ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect((b.x-mnX)*sc,(b.y-mnY)*sc,b.w*sc,b.h*sc,2);
+    ctx.fill();ctx.stroke();
+  });
+  const m=document.getElementById('main');
+  ctx.strokeStyle=COL.or;ctx.lineWidth=1.5;ctx.setLineDash([3,2]);
+  ctx.strokeRect((-vp.x/vp.z-mnX)*sc,(-vp.y/vp.z-mnY)*sc,(m.clientWidth/vp.z)*sc,(m.clientHeight/vp.z)*sc);
+  ctx.setLineDash([]);
+}
+
+// ════════════════════════════════════════════════════════════
+//  ANIM LOOP
+// ════════════════════════════════════════════════════════════
+let raf;
+function loop(ts){
+  if(!lastT)lastT=ts;
+  const dt=Math.min((ts-lastT)/1000,.1); lastT=ts;
+  if(running)simTick(dt);
+  drawItems(); drawMM(); drawChainLines(); drawWires();
+  raf=requestAnimationFrame(loop);
+}
+raf=requestAnimationFrame(loop);
+
+// ════════════════════════════════════════════════════════════
+//  MOUSE / INTERACTION
+// ════════════════════════════════════════════════════════════
+function bDown(e,bid){
+  if(e.button!==0||portFrom||tabFrom) return;
+  e.stopPropagation();
+  sel=bid;
+  document.querySelectorAll('.block,.belt').forEach(el=>el.classList.remove('sel'));
+  document.getElementById('b'+bid)?.querySelector('.block,.belt,.conv-seg')?.classList.add('sel');
+  document.getElementById('b'+bid)?.classList.add('sel'); // belt is the el itself
+  const b=blocks.find(x=>x.id===bid);
+  const el=document.getElementById('b'+bid);
+  const rect=el.getBoundingClientRect();
+  dragging=bid; dragOff={x:(e.clientX-rect.left)/vp.z, y:(e.clientY-rect.top)/vp.z};
+}
+
+function portDown(e,bid,side,role){
+  e.stopPropagation();e.preventDefault();
+  portFrom={bid,side,role};
+  document.getElementById('p'+side+bid)?.classList.add('hi');
+}
+
+function tabDown(e,bid,side){
+  e.stopPropagation();e.preventDefault();
+  tabFrom={bid,side};
+  document.getElementById('t'+side+bid)?.classList.add('hi');
+}
+
+function resDown(e,bid){
+  e.stopPropagation();e.preventDefault();
+  const b=blocks.find(x=>x.id===bid);
+  resizing={bid,sx:e.clientX,sy:e.clientY,w0:b.w,h0:b.h};
+}
+
+function mDown(e){
+  if(e.button===1||(e.button===0&&e.altKey)){
+    e.preventDefault(); panning=true;
+    panSt={mx:e.clientX,my:e.clientY,px:vp.x,py:vp.y};
+    document.getElementById('main').style.cursor='grabbing'; return;
+  }
+  if(portFrom&&e.button===0){cancelPort();}
+  if(tabFrom&&e.button===0){cancelTab();}
+  if(e.button===0&&!dragging){
+    sel=null;
+    document.querySelectorAll('.block,.belt').forEach(el=>el.classList.remove('sel'));
+    hideCtx();
+  }
+}
+
+function mMove(e){
+  const m=document.getElementById('main'),rect=m.getBoundingClientRect();
+  const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
+
+  if(panning){vp.x=panSt.px+(e.clientX-panSt.mx);vp.y=panSt.py+(e.clientY-panSt.my);applyVP();return;}
+
+  if(resizing){
+    const b=blocks.find(x=>x.id===resizing.bid);if(!b)return;
+    b.w=Math.max(70,resizing.w0+(e.clientX-resizing.sx)/vp.z);
+    b.h=Math.max(28,resizing.h0+(e.clientY-resizing.sy)/vp.z);
+    setBlockPos(b);drawWires();drawChainLines();return;
+  }
+
+  if(dragging!==null){
+    const b=blocks.find(x=>x.id===dragging);if(!b)return;
+    const mw=s2w(sx,sy);
+    b.x=Math.round((mw.x-dragOff.x)/10)*10;
+    b.y=Math.round((mw.y-dragOff.y)/10)*10;
+    setBlockPos(b);drawWires();drawChainLines();return;
+  }
+
+  // Temp line for port connection
+  if(portFrom){
+    const p1=portCenter(portFrom.bid,portFrom.side);if(!p1)return;
+    const cv=s=>{if(s==='R')return[40,0];if(s==='L')return[-40,0];if(s==='B')return[0,40];return[0,-40];};
+    const[cx1,cy1]=cv(portFrom.side);
+    document.getElementById('tmpLine').innerHTML=
+      `<path d="M${p1.x},${p1.y} C${p1.x+cx1},${p1.y+cy1} ${sx},${sy} ${sx},${sy}"
+      stroke="${COL.gn}" stroke-width="2" fill="none" stroke-dasharray="7,4" opacity=".85"/>`;
+  }
+
+  // Temp line for chain tab connection
+  if(tabFrom){
+    const b=blocks.find(x=>x.id===tabFrom.bid);if(!b)return;
+    const s=tabFrom.side;
+    const wp=s==='L'?{x:b.x,y:b.y+b.h/2}:s==='R'?{x:b.x+b.w,y:b.y+b.h/2}:
+              s==='T'?{x:b.x+b.w/2,y:b.y}:{x:b.x+b.w/2,y:b.y+b.h};
+    const p1=w2s(wp.x,wp.y);
+    document.getElementById('tmpLine').innerHTML=
+      `<line x1="${p1.x}" y1="${p1.y}" x2="${sx}" y2="${sy}"
+      stroke="${COL.ye}" stroke-width="3" stroke-dasharray="6,3" opacity=".9"/>`;
+  }
+}
+
+function mUp(e){
+  const m=document.getElementById('main');
+  if(panning){panning=false;m.style.cursor='default';applyVP();return;}
+  dragging=null; resizing=null;
+  document.getElementById('tmpLine').innerHTML='';
+
+  const under=document.elementFromPoint(e.clientX,e.clientY);
+
+  if(portFrom){
+    // Find target port
+    if(under?.classList.contains('port')){
+      const id_str=under.id; // p{SIDE}{bid}
+      const side=id_str[1], bid=parseInt(id_str.slice(2));
+      if(bid!==portFrom.bid){
+        // from=out → to=in
+        if(portFrom.role==='out') addWire(portFrom.bid,portFrom.side,bid,side);
+        else addWire(bid,side,portFrom.bid,portFrom.side);
+      }
+    }
+    cancelPort();
+  }
+
+  if(tabFrom){
+    // Find target belt tab
+    if(under?.classList.contains('tab')){
+      const id_str=under.id; // t{SIDE}{bid}
+      const side=id_str[1], bid=parseInt(id_str.slice(2));
+      if(bid!==tabFrom.bid){
+        connectBelts(tabFrom.bid,tabFrom.side,bid,side);
+      }
+    }
+    cancelTab();
+  }
+}
+
+function cancelPort(){portFrom=null;document.querySelectorAll('.port').forEach(p=>p.classList.remove('hi'));}
+function cancelTab(){tabFrom=null;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('hi'));}
+
+function mWheel(e){
+  e.preventDefault();
+  const m=document.getElementById('main'),rect=m.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const dz=e.deltaY>0?.88:1.13;
+  const nz=Math.min(3,Math.max(.1,vp.z*dz));
+  vp.x=mx-(mx-vp.x)*(nz/vp.z); vp.y=my-(my-vp.y)*(nz/vp.z); vp.z=nz;
+  applyVP();
+}
+
+function mDrop(e){
+  if(!dragType)return;
+  const m=document.getElementById('main'),rect=m.getBoundingClientRect();
+  const wx=(e.clientX-rect.left-vp.x)/vp.z-DEFS[dragType].w/2;
+  const wy=(e.clientY-rect.top-vp.y)/vp.z-DEFS[dragType].h/2;
+  newBlock(dragType,wx,wy); dragType=null;
+}
+
+// ════════════════════════════════════════════════════════════
+//  CTX MENU
+// ════════════════════════════════════════════════════════════
+function showCtx(e,id,type){
+  ctxTgt={id,type};
+  const m=document.getElementById('ctx');
+  m.style.left=e.clientX+'px'; m.style.top=e.clientY+'px'; m.style.display='block';
+  if(type==='belt'){
+    const ch=getChainOfBlock(id);
+    m.innerHTML=`
+      <div class="ci" onclick="ctxA('rev')">🔄 Richtung umkehren</div>
+      <div class="ci" onclick="ctxA('disc')">✂️ Aus Kette trennen</div>
+      <div class="ci" onclick="ctxA('clr')">🧹 Kette leeren</div>
+      <div class="ci" onclick="ctxA('vert')">↕ Vertikal/Horizontal</div>
+      <div class="csep"></div>
+      <div class="ci r" onclick="ctxA('del')">🗑 Löschen</div>`;
+  } else if(type==='wire'){
+    m.innerHTML=`<div class="ci r" onclick="ctxA('wdel')">🗑 Verbindung löschen</div>`;
+  } else {
+    m.innerHTML=`
+      <div class="ci" onclick="ctxA('clr')">🧹 Buffer leeren</div>
+      <div class="ci" onclick="ctxA('dup')">📋 Duplizieren</div>
+      <div class="csep"></div>
+      <div class="ci r" onclick="ctxA('del')">🗑 Löschen</div>`;
+  }
+}
+function hideCtx(){document.getElementById('ctx').style.display='none';}
+document.addEventListener('click',hideCtx);
+
+function ctxA(a){
+  hideCtx(); if(!ctxTgt)return;
+  const{id,type}=ctxTgt;
+  if(a==='rev'){
+    const ch=getChainOfBlock(id);
+    if(ch){ch.dir*=-1; ch.segs.reverse(); ch.items.forEach(i=>i.pos=ch.segs.length-i.pos);}
+  }
+  if(a==='disc') disconnectFromChain(id);
+  if(a==='vert'){const ch=getChainOfBlock(id);if(ch)ch.vert=!ch.vert;}
+  if(a==='clr'){const ch=getChainOfBlock(id);if(ch)ch.items=[];}
+  if(a==='del'){
+    const ch=getChainOfBlock(id);
+    if(ch){ch.segs=ch.segs.filter(s=>s!==id);if(!ch.segs.length)chains=chains.filter(c=>c!==ch);}
+    blocks=blocks.filter(b=>b.id!==id);
+    wires=wires.filter(w=>w.from!==id&&w.to!==id);
+    document.getElementById('b'+id)?.remove();
+    drawWires();drawChainLines();
+  }
+  if(a==='wdel'){wires=wires.filter(w=>w.id!==id);drawWires();}
+  if(a==='clr'&&type!=='belt'){const b=blocks.find(x=>x.id===id);if(b){b.buf=[];b.outBuf=[];b.jammed=false;}}
+  if(a==='dup'){const b=blocks.find(x=>x.id===id);if(b)newBlock(b.type,b.x+25,b.y+25);}
+}
+
+// ════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ════════════════════════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(document.activeElement.tagName==='INPUT')return;
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(sel){
+      const ch=getChainOfBlock(sel);
+      if(ch){ch.segs=ch.segs.filter(s=>s!==sel);if(!ch.segs.length)chains=chains.filter(c=>c!==ch);}
+      blocks=blocks.filter(b=>b.id!==sel);
+      wires=wires.filter(w=>w.from!==sel&&w.to!==sel);
+      document.getElementById('b'+sel)?.remove();
+      sel=null; drawWires(); drawChainLines();
+    }
+  }
+  if(e.key==='Escape'){cancelPort();cancelTab();document.getElementById('tmpLine').innerHTML='';}
+  if(e.key===' '){e.preventDefault();toggleRun();}
+});
+
+// ════════════════════════════════════════════════════════════
+//  CONTROLS
+// ════════════════════════════════════════════════════════════
+function toggleRun(){
+  running=!running;lastT=null;
+  const b=document.getElementById('btnRun');
+  b.textContent=running?'▶ Läuft':'⏸ Pause';
+  b.className=running?'active':'';
+}
+function doStep(){running=false;lastT=null;document.getElementById('btnRun').textContent='⏸ Pause';document.getElementById('btnRun').className='';simTick(0.06);}
+function setSpd(s){speed=s;}
+function zIn(){const m=document.getElementById('main');vp.x=m.clientWidth/2-(m.clientWidth/2-vp.x)*1.2;vp.y=m.clientHeight/2-(m.clientHeight/2-vp.y)*1.2;vp.z=Math.min(3,vp.z*1.2);applyVP();}
+function zOut(){const m=document.getElementById('main');vp.x=m.clientWidth/2-(m.clientWidth/2-vp.x)*.83;vp.y=m.clientHeight/2-(m.clientHeight/2-vp.y)*.83;vp.z=Math.max(.1,vp.z*.83);applyVP();}
+function zReset(){vp={x:60,y:70,z:1};applyVP();}
+function clearAll(){
+  if(blocks.length>0&&!confirm('Alles löschen?'))return;
+  blocks=[];chains=[];wires=[];totalProd=0;
+  world().innerHTML='';drawWires();drawChainLines();
+}
+function exportS(){
+  const d=JSON.stringify({
+    blocks:blocks.map(b=>({...b,buf:[],outBuf:[],timer:0,procT:0})),
+    chains:chains.map(c=>({...c,items:[]})),
+    wires:wires.map(w=>({...w,items:[]}))
+  },null,2);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'application/json'}));
+  a.download='fabrik.json';a.click();
+}
+function importS(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      clearAll();
+      (d.blocks||[]).forEach(b=>{
+        blocks.push({...b,buf:[],outBuf:[],timer:0,procT:0,jammed:false,active:false});
+        renderBlock(blocks[blocks.length-1]);
+        if(b.id>=uid)uid=b.id+1;
+      });
+      chains=(d.chains||[]).map(c=>({...c,items:[]}));
+      wires=(d.wires||[]).map(w=>({...w,items:[]}));
+      drawWires();drawChainLines();
+    }catch{alert('Import fehlgeschlagen');}
+  };r.readAsText(f);
+}
+
+// ════════════════════════════════════════════════════════════
+//  EXAMPLE LAYOUT
+// ════════════════════════════════════════════════════════════
+function loadEx(){
+  if(blocks.length>0&&!confirm('Layout ersetzen?'))return;
+  clearAll(); vp={x:50,y:60,z:0.9}; applyVP();
+
+  // ── Eingangsseite ──
+  const farm  = newBlock('farm',   30, 80);
+  const mine  = newBlock('mine',   30, 230);
+
+  // Eingangs-Kette: 4 Belt-Segmente horizontal
+  const b1 = newBlock('belt', 200, 140);
+  const b2 = newBlock('belt', 340, 140);
+  const b3 = newBlock('belt', 480, 140);
+  const b4 = newBlock('belt', 620, 140);
+
+  // Frogport IN + Lager
+  const fpin   = newBlock('fpin',   760, 110);
+  const barrel = newBlock('barrel', 900, 110);
+  const vault  = newBlock('vault',  1040, 110);
+
+  // ── Ausgangsseite ──
+  const fpout  = newBlock('fpout',  1040, 260);
+
+  // Ausgangs-Kette: 4 Segmente (rückwärts)
+  const o1 = newBlock('belt', 900, 275);
+  const o2 = newBlock('belt', 760, 275);
+  const o3 = newBlock('belt', 620, 275);
+  const o4 = newBlock('belt', 480, 275);
+
+  const depot  = newBlock('depot',  310, 260);
+  const player = newBlock('player', 140, 260);
+
+  setTimeout(()=>{
+    // ── Eingangs-Kette verbinden (L→R) ──
+    connectBelts(b1.id,'R', b2.id,'L');
+    connectBelts(b2.id,'R', b3.id,'L');
+    connectBelts(b3.id,'R', b4.id,'L');
+
+    // ── Ausgangs-Kette verbinden (als ←) ──
+    connectBelts(o1.id,'R', fpout.id,'R'); // placeholder, actually just chain
+    // Reset and connect outchain properly
+    setTimeout(()=>{
+      connectBelts(o1.id,'L', o2.id,'R');
+      connectBelts(o2.id,'L', o3.id,'R');
+      connectBelts(o3.id,'L', o4.id,'R');
+      // Reverse output chain direction
+      const chOut=getChainOfBlock(o4.id);
+      if(chOut){chOut.dir=-1;}
+
+      // ── Maschinen → Eingangs-Kette ──
+      addWire(farm.id,'R', b1.id,'L');
+      addWire(mine.id,'R', b2.id,'L');
+
+      // ── Eingangs-Kette Ende → Frogport IN ──
+      addWire(b4.id,'R', fpin.id,'L');
+
+      // ── Frogport IN → Barrel → Vault ──
+      addWire(fpin.id,'B', barrel.id,'L');
+      addWire(barrel.id,'R', vault.id,'L');
+
+      // ── Vault → Frogport OUT ──
+      addWire(vault.id,'B', fpout.id,'T');
+
+      // ── Frogport OUT → Ausgangs-Kette ──
+      addWire(fpout.id,'R', o1.id,'R');
+
+      // ── Ausgangs-Kette Ende → Depot → Spieler ──
+      addWire(o4.id,'L', depot.id,'L');
+      addWire(depot.id,'R', player.id,'L');
+
+      drawWires(); drawChainLines();
+    }, 150);
+  }, 80);
+}
+
+window.addEventListener('resize',()=>{drawBG();drawWires();drawChainLines();});
+applyVP();
+loadEx();
+</script>
+</body>
+</html>
