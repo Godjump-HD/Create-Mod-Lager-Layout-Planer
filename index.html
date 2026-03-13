@@ -3,808 +3,727 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Create Mod Fabrik Simulator</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+<title>Create Mod — Lager Planer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#05080c; --surf:#0b1018; --surf2:#111822; --bord:#1a2535;
-  --orange:#f97316; --blue:#38bdf8; --green:#22c55e; --yellow:#facc15;
-  --red:#ef4444; --purple:#a78bfa; --gray:#475569; --text:#cbd5e1; --dim:#64748b;
-  --font:'JetBrains Mono',monospace;
+  --bg: #07090d;
+  --surface: #0e1117;
+  --surface2: #161b25;
+  --border: #1e2736;
+  --orange: #f97316;
+  --blue: #38bdf8;
+  --green: #22c55e;
+  --yellow: #facc15;
+  --red: #ef4444;
+  --purple: #a78bfa;
+  --gray: #64748b;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
-body{display:flex;flex-direction:column;font-family:var(--font);color:var(--text);}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-.hdr{height:46px;flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--bord);
-  display:flex;align-items:center;padding:0 12px;gap:8px;z-index:100;flex-wrap:wrap;}
-.logo{font-family:'Bebas Neue',sans-serif;font-size:21px;color:var(--orange);letter-spacing:2px;white-space:nowrap;}
-.logo sub{font-family:var(--font);font-size:9px;color:var(--dim);letter-spacing:0;margin-left:6px;vertical-align:middle;}
-.sep{width:1px;height:22px;background:var(--bord);flex-shrink:0;}
-.btn{background:none;border:1px solid var(--bord);color:var(--dim);border-radius:5px;
-  padding:4px 9px;font-size:10px;cursor:pointer;font-family:var(--font);
-  transition:all .12s;white-space:nowrap;}
-.btn:hover{border-color:var(--orange);color:var(--orange);background:#f9731611;}
-.btn.on{border-color:var(--green);color:var(--green);background:#22c55e11;}
-.btn.red:hover{border-color:var(--red);color:var(--red);}
-.spd{font-size:10px;color:var(--dim);min-width:40px;text-align:center;}
-.spacer{flex:1;}
-.stat{font-size:9px;color:var(--dim);padding:0 8px;border-left:1px solid var(--bord);}
-.stat span{color:var(--text);}
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 12px; flex-wrap: wrap;
+}
+.logo { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: var(--orange); letter-spacing: 1px; white-space: nowrap; }
+.logo span { color: var(--text-dim); font-size: 11px; font-weight: 400; margin-left: 8px; font-family: 'JetBrains Mono', monospace; }
 
-.layout{display:flex;flex:1;overflow:hidden;}
+/* Toolbar */
+.toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--orange); color: var(--orange); }
+.btn.danger:hover { border-color: var(--red); color: var(--red); }
+.btn.success { border-color: var(--green); color: var(--green); }
+.sep { width: 1px; height: 20px; background: var(--border); }
 
-/* SIDEBAR */
-.sb{width:192px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bord);
-  overflow-y:auto;padding:8px 6px;}
-.sb::-webkit-scrollbar{width:3px;}
-.sb::-webkit-scrollbar-thumb{background:var(--bord);}
-.cat{font-size:8px;color:var(--dim);letter-spacing:3px;padding:8px 4px 3px;}
-.sn{display:flex;align-items:center;gap:6px;border:1px solid var(--bord);border-radius:7px;
-  padding:6px 8px;cursor:pointer;transition:all .13s;background:var(--surf2);
-  user-select:none;margin-bottom:4px;}
-.sn:hover{transform:translateX(2px);border-color:var(--orange);}
-.sn .em{font-size:14px;flex-shrink:0;}
-.sn .inf .nm{font-size:10px;font-weight:700;}
-.sn .inf .ds{font-size:8px;color:var(--dim);margin-top:1px;}
-.sn .rate{font-size:8px;color:var(--yellow);margin-top:2px;}
+/* Main layout */
+.main { display: flex; flex: 1; overflow: hidden; }
 
-/* CANVAS */
-.wrap{flex:1;position:relative;overflow:hidden;background:var(--bg);}
-#bgC{position:absolute;inset:0;pointer-events:none;}
-#simC{position:absolute;inset:0;pointer-events:none;}
-#uiSvg{position:absolute;inset:0;overflow:visible;pointer-events:none;}
-#ndLayer{position:absolute;top:0;left:0;}
+/* Sidebar */
+.sidebar {
+  width: 200px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 12px 8px;
+}
+.sidebar-title { font-size: 9px; color: var(--gray); letter-spacing: 3px; margin-bottom: 8px; padding: 0 4px; }
+.node-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+  cursor: grab; transition: all 0.15s; user-select: none;
+}
+.node-btn:hover { transform: translateX(2px); }
+.node-btn .icon { font-size: 16px; flex-shrink: 0; }
+.node-btn .info { flex: 1; min-width: 0; }
+.node-btn .name { font-size: 11px; font-weight: 700; }
+.node-btn .desc { font-size: 9px; color: var(--gray); margin-top: 1px; }
 
-/* NODES */
-.nd{position:absolute;user-select:none;}
-.nd-inner{border-radius:10px;border:1.5px solid currentColor;background:var(--surf);
-  position:relative;width:100%;height:100%;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:6px 8px;text-align:center;transition:box-shadow .15s,filter .15s;}
-.nd.sel .nd-inner{box-shadow:0 0 0 2px var(--orange),0 0 20px #f9731633;}
-.nd.jammed .nd-inner{box-shadow:0 0 0 2px var(--red),0 0 16px #ef444444!important;animation:pulse-red 0.8s ease-in-out infinite;}
-.nd.active .nd-inner{animation:pulse-glow 1.5s ease-in-out infinite;}
-@keyframes pulse-red{0%,100%{box-shadow:0 0 0 2px var(--red),0 0 8px #ef444433;}50%{box-shadow:0 0 0 2px var(--red),0 0 24px #ef4444aa;}}
-@keyframes pulse-glow{0%,100%{filter:brightness(1);}50%{filter:brightness(1.2);}}
-.nd-icon{font-size:18px;line-height:1;flex-shrink:0;}
-.nd-lbl{font-size:9px;font-weight:700;margin-top:3px;background:transparent;border:none;outline:none;
-  font-family:var(--font);text-align:center;width:100%;color:inherit;cursor:text;line-height:1.3;}
-.nd-sub{font-size:7px;color:var(--dim);margin-top:1px;}
-.nd-bar{width:90%;height:4px;background:#1a2535;border-radius:2px;margin-top:4px;overflow:hidden;flex-shrink:0;}
-.nd-fill{height:100%;border-radius:2px;transition:width .3s;}
-.nd-count{font-size:8px;color:var(--dim);margin-top:2px;}
-.port{position:absolute;width:11px;height:11px;border-radius:50%;
-  background:var(--surf2);border:2px solid var(--gray);
-  cursor:crosshair;transition:all .12s;z-index:20;}
-.port:hover,.port.lit{border-color:var(--orange);background:var(--orange);transform:scale(1.4)!important;}
-.port[data-d=r]{right:-6px;top:50%;transform:translateY(-50%);}
-.port[data-d=l]{left:-6px;top:50%;transform:translateY(-50%);}
-.port[data-d=b]{bottom:-6px;left:50%;transform:translateX(-50%);}
-.port[data-d=t]{top:-6px;left:50%;transform:translateX(-50%);}
-.port.in-port{border-color:#38bdf8;}
-.port.out-port{border-color:#22c55e;}
-.rh{position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;cursor:se-resize;z-index:25;
-  border-right:2px solid var(--orange);border-bottom:2px solid var(--orange);
-  border-radius:0 0 3px 0;opacity:0;transition:opacity .15s;}
-.nd:hover .rh,.nd.sel .rh{opacity:1;}
-.conn-label{position:absolute;pointer-events:none;font-size:8px;fill:var(--dim);}
+/* Canvas */
+.canvas-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+canvas#grid { position: absolute; inset: 0; pointer-events: none; }
+svg#canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  cursor: default;
+}
 
-/* CTX */
-.ctx{position:fixed;background:var(--surf);border:1px solid var(--bord);
-  border-radius:8px;padding:4px;z-index:9999;min-width:160px;
-  box-shadow:0 12px 40px #00000099;display:none;}
-.ci{padding:6px 10px;font-size:10px;cursor:pointer;border-radius:5px;color:var(--dim);transition:.1s;}
-.ci:hover{background:var(--surf2);color:var(--text);}
-.ci.r:hover{color:var(--red);}
-.csep{height:1px;background:var(--bord);margin:3px 0;}
+/* Nodes */
+.node-el {
+  position: absolute; cursor: move; user-select: none;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+}
+.node-el:hover .node-body { filter: brightness(1.15); }
+.node-body {
+  border-radius: 10px; padding: 10px 14px; min-width: 130px;
+  background: var(--surface); border: 1.5px solid currentColor;
+  text-align: center; transition: filter 0.15s;
+  position: relative;
+}
+.node-body.selected { box-shadow: 0 0 0 2px var(--orange), 0 0 20px rgba(249,115,22,0.3); }
+.node-icon { font-size: 20px; margin-bottom: 4px; }
+.node-title { font-size: 11px; font-weight: 700; }
+.node-sub { font-size: 9px; color: var(--gray); margin-top: 2px; }
+.node-label-input {
+  background: transparent; border: none; outline: none;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  text-align: center; width: 100%; color: inherit;
+}
 
-/* MINIMAP */
-.mm{position:absolute;bottom:48px;right:12px;width:160px;height:90px;
-  background:var(--surf);border:1px solid var(--bord);border-radius:8px;overflow:hidden;opacity:.8;}
+/* Connection ports */
+.port {
+  position: absolute; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--surface2); border: 2px solid var(--gray);
+  cursor: crosshair; transition: all 0.15s; z-index: 10;
+}
+.port:hover, .port.active { border-color: var(--orange); background: var(--orange); transform: scale(1.3); }
+.port.right { right: -6px; top: 50%; transform: translateY(-50%); }
+.port.right:hover, .port.right.active { transform: translateY(-50%) scale(1.3); }
+.port.left { left: -6px; top: 50%; transform: translateY(-50%); }
+.port.left:hover, .port.left.active { transform: translateY(-50%) scale(1.3); }
+.port.bottom { bottom: -6px; left: 50%; transform: translateX(-50%); }
+.port.bottom:hover, .port.bottom.active { transform: translateX(-50%) scale(1.3); }
+.port.top { top: -6px; left: 50%; transform: translateX(-50%); }
+.port.top:hover, .port.top.active { transform: translateX(-50%) scale(1.3); }
 
-/* TIP */
-.tip{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
-  background:var(--surf);border:1px solid var(--bord);border-radius:6px;
-  padding:4px 12px;font-size:9px;color:var(--dim);pointer-events:none;
-  white-space:nowrap;z-index:200;}
+/* Info panel */
+.info-panel {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: 10px; color: var(--gray); white-space: nowrap;
+  pointer-events: none;
+}
 
-/* ITEM PILL */
-.item-pill{position:absolute;pointer-events:none;z-index:50;
-  background:var(--surf2);border:1px solid currentColor;
-  border-radius:10px;padding:1px 5px;font-size:8px;
-  white-space:nowrap;transform:translate(-50%,-50%);
-  box-shadow:0 0 6px currentColor;}
+/* Context menu */
+.ctx-menu {
+  position: fixed; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px; z-index: 1000; min-width: 140px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none;
+}
+.ctx-item {
+  padding: 6px 10px; font-size: 11px; cursor: pointer; border-radius: 5px;
+  color: var(--text-dim); transition: all 0.1s;
+}
+.ctx-item:hover { background: var(--surface2); color: var(--text); }
+.ctx-item.red:hover { color: var(--red); }
+.ctx-sep { height: 1px; background: var(--border); margin: 3px 0; }
+
+/* Connection label */
+.conn-label {
+  position: absolute; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 6px; font-size: 9px; color: var(--text-dim);
+  pointer-events: none; white-space: nowrap;
+}
 </style>
 </head>
 <body>
 
-<div class="hdr">
-  <div class="logo">FABRIK SIM <sub>Create Mod · GodjumpHD</sub></div>
-  <div class="sep"></div>
-  <button class="btn on" id="runBtn" onclick="toggleRun()">▶ Läuft</button>
-  <button class="btn" onclick="stepOnce()">⏭ Schritt</button>
-  <div class="sep"></div>
-  <div class="spd">Tempo:</div>
-  <button class="btn" onclick="setSpeed(0.5)">0.5×</button>
-  <button class="btn" onclick="setSpeed(1)">1×</button>
-  <button class="btn" onclick="setSpeed(2)">2×</button>
-  <button class="btn" onclick="setSpeed(4)">4×</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="zoomIn()">＋</button>
-  <div class="spd" id="zInfo">100%</div>
-  <button class="btn" onclick="zoomOut()">－</button>
-  <button class="btn" onclick="resetView()">⊙</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="loadExample()">📦 Beispiel</button>
-  <button class="btn red" onclick="clearAll()">🗑</button>
-  <div class="spacer"></div>
-  <div class="stat">Items produziert: <span id="statProd">0</span></div>
-  <div class="stat">Staus: <span id="statJam" style="color:var(--red)">0</span></div>
-  <div class="stat">Items gelagert: <span id="statStore">0</span></div>
-  <button class="btn" onclick="exportJSON()">💾</button>
-  <button class="btn" onclick="document.getElementById('impF').click()">📂</button>
-  <input id="impF" type="file" accept=".json" style="display:none" onchange="importJSON(event)">
-</div>
-
-<div class="layout">
-  <div class="sb" id="sb"></div>
-  <div class="wrap" id="wrap"
-    onmousedown="wDown(event)" onmousemove="wMove(event)" onmouseup="wUp(event)"
-    onwheel="wWheel(event)" ondragover="event.preventDefault()" ondrop="wDrop(event)"
-    oncontextmenu="event.preventDefault()">
-    <canvas id="bgC"></canvas>
-    <canvas id="simC"></canvas>
-    <svg id="uiSvg" xmlns="http://www.w3.org/2000/svg">
-      <defs id="svgD"></defs>
-      <g id="connG"></g>
-      <g id="tmpG"></g>
-    </svg>
-    <div id="ndLayer"></div>
-    <div class="tip">Klick = Block hinzufügen · Port ziehen = verbinden · Alt+Drag / Mittelklick = Pan · Scroll = Zoom · Entf = Löschen</div>
-    <div class="mm"><canvas id="mmC"></canvas></div>
+<div class="header">
+  <div class="logo">LAGER PLANER <span>GodjumpHD · Create Mod</span></div>
+  <div class="toolbar">
+    <button class="btn" onclick="clearAll()">🗑 Alles löschen</button>
+    <div class="sep"></div>
+    <button class="btn" onclick="loadExample()">📦 Beispiel laden</button>
+    <div class="sep"></div>
+    <button class="btn success" onclick="exportPNG()">💾 Als Bild speichern</button>
+    <button class="btn" onclick="exportJSON()">📋 Exportieren</button>
+    <button class="btn" onclick="importJSON()">📂 Importieren</button>
   </div>
 </div>
-<div class="ctx" id="ctx"></div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-title">BAUSTEINE</div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— KERN —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'conveyer-in')" onclick="addNodeCenter('conveyer-in')">
+      <div class="icon">📦</div>
+      <div class="info"><div class="name" style="color:#f97316;">Eingangs-Conveyer</div><div class="desc">NUR EINGANG</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'conveyer-out')" onclick="addNodeCenter('conveyer-out')">
+      <div class="icon">📦</div>
+      <div class="info"><div class="name" style="color:#38bdf8;">Ausgangs-Conveyer</div><div class="desc">NUR AUSGANG</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'frogport-in')" onclick="addNodeCenter('frogport-in')">
+      <div class="icon">🐸</div>
+      <div class="info"><div class="name" style="color:#fb923c;">Frogport IN</div><div class="desc">nur aufnehmen</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'frogport-out')" onclick="addNodeCenter('frogport-out')">
+      <div class="icon">🐸</div>
+      <div class="info"><div class="name" style="color:#38bdf8;">Frogport OUT</div><div class="desc">nur abgeben</div></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— LAGER —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'vault-main')" onclick="addNodeCenter('vault-main')">
+      <div class="icon">🗄️</div>
+      <div class="info"><div class="name" style="color:#22c55e;">Haupt-Vault</div><div class="desc">Hauptlager</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'vault-buffer')" onclick="addNodeCenter('vault-buffer')">
+      <div class="icon">🛡️</div>
+      <div class="info"><div class="name" style="color:#facc15;">Puffer-Vault</div><div class="desc">Überlauf-Schutz</div></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— STEUERUNG —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'comparator')" onclick="addNodeCenter('comparator')">
+      <div class="icon">📊</div>
+      <div class="info"><div class="name" style="color:#ef4444;">Comparator</div><div class="desc">Füllstand messen</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'redstone')" onclick="addNodeCenter('redstone')">
+      <div class="icon">🔴</div>
+      <div class="info"><div class="name" style="color:#ef4444;">Redstone</div><div class="desc">Signal bei Stau</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'clutch')" onclick="addNodeCenter('clutch')">
+      <div class="icon">⚡</div>
+      <div class="info"><div class="name" style="color:#ef4444;">Kupplung</div><div class="desc">Produktion stoppen</div></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— SONSTIGES —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'machine')" onclick="addNodeCenter('machine')">
+      <div class="icon">⚙️</div>
+      <div class="info"><div class="name" style="color:#94a3b8;">Maschine</div><div class="desc">Produktion</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'player')" onclick="addNodeCenter('player')">
+      <div class="icon">🧑‍🎮</div>
+      <div class="info"><div class="name" style="color:#a78bfa;">Spieler</div><div class="desc">Anfragen</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'label')" onclick="addNodeCenter('label')">
+      <div class="icon">🏷️</div>
+      <div class="info"><div class="name" style="color:#64748b;">Label</div><div class="desc">Beschriftung</div></div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap" id="canvasWrap"
+    ondragover="event.preventDefault()"
+    ondrop="onDrop(event)"
+    onmousedown="canvasMouseDown(event)"
+    onmousemove="canvasMouseMove(event)"
+    onmouseup="canvasMouseUp(event)"
+    oncontextmenu="event.preventDefault()"
+    onwheel="onWheel(event)">
+
+    <canvas id="grid"></canvas>
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#f97316"/>
+        </marker>
+        <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#38bdf8"/>
+        </marker>
+        <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#22c55e"/>
+        </marker>
+        <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#ef4444"/>
+        </marker>
+        <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#64748b"/>
+        </marker>
+      </defs>
+      <g id="connections"></g>
+      <g id="temp-conn"></g>
+    </svg>
+    <div id="nodes"></div>
+
+    <div class="info-panel" id="infoPanel">
+      Klicke auf Bausteine um sie hinzuzufügen · Ziehe zwischen Ports um zu verbinden · Rechtsklick für Optionen
+    </div>
+  </div>
+</div>
+
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" onclick="ctxAction('label')">✏️ Label bearbeiten</div>
+  <div class="ctx-item" onclick="ctxAction('color')">🎨 Farbe ändern</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="ctxAction('duplicate')">📋 Duplizieren</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item red" onclick="ctxAction('delete')">🗑 Löschen</div>
+</div>
 
 <script>
-// ═══════════════════════════════════════════════════ CONSTANTS
-const COLORS={orange:'#f97316',blue:'#38bdf8',green:'#22c55e',yellow:'#facc15',
-               red:'#ef4444',purple:'#a78bfa',gray:'#475569',white:'#e2e8f0'};
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let nodes = [];
+let connections = [];
+let nextId = 1;
+let selectedNode = null;
+let draggingNode = null;
+let dragOffset = { x: 0, y: 0 };
+let connectingFrom = null; // { nodeId, port }
+let ctxTarget = null;
+let dragType = null;
+let pan = { x: 0, y: 0 };
+let isPanning = false;
+let panStart = { x: 0, y: 0 };
+let tempLine = null;
+let mousePos = { x: 0, y: 0 };
 
-// Node type definitions
-// ports: array of {d:'r'|'l'|'t'|'b', role:'in'|'out'|'any'}
-// capacity: max items buffer
-// prodRate: items per second (machines)
-// procTime: seconds per item (processors)
-const DEFS={
-  // MACHINES
-  'mill':   {em:'⚙️', nm:'Mühle',         ds:'Produziert Mehl',        col:'gray',   cat:'machine',   capacity:0,  prodRate:0.8, output:'🌾→🌿', portDef:[{d:'r',role:'out'}]},
-  'press':  {em:'🔨', nm:'Presse',         ds:'Produziert Platten',     col:'gray',   cat:'machine',   capacity:0,  prodRate:0.5, output:'🪨→🟫', portDef:[{d:'r',role:'out'}]},
-  'mixer':  {em:'🌀', nm:'Mischer',        ds:'Produziert Mischung',    col:'gray',   cat:'machine',   capacity:0,  prodRate:0.4, output:'⚗️',     portDef:[{d:'r',role:'out'}]},
-  'farm':   {em:'🌾', nm:'Farm',           ds:'Produziert Rohstoffe',   col:'green',  cat:'machine',   capacity:0,  prodRate:1.2, output:'🌾',     portDef:[{d:'r',role:'out'}]},
-  'mine':   {em:'⛏️', nm:'Mine',           ds:'Produziert Erze',        col:'gray',   cat:'machine',   capacity:0,  prodRate:0.6, output:'🪨',     portDef:[{d:'r',role:'out'}]},
-  // CONVEYORS
-  'conv':   {em:'➡️', nm:'Conveyer',       ds:'Fördert Items',          col:'orange', cat:'conveyor',  capacity:8,  speed:2.0,   portDef:[{d:'l',role:'in'},{d:'r',role:'out'}]},
-  // FROGPORTS
-  'fpin':   {em:'🐸', nm:'Frogport IN',    ds:'Nimmt Items auf',        col:'orange', cat:'frogport',  capacity:12, portDef:[{d:'l',role:'in'},{d:'b',role:'out'}]},
-  'fpout':  {em:'🐸', nm:'Frogport OUT',   ds:'Gibt Items ab',          col:'blue',   cat:'frogport',  capacity:12, portDef:[{d:'t',role:'in'},{d:'r',role:'out'}]},
-  // STORAGE
-  'vault':  {em:'🗄️', nm:'Vault',          ds:'Hauptlager',             col:'green',  cat:'storage',   capacity:128,portDef:[{d:'l',role:'in'},{d:'r',role:'out'}]},
-  'barrel': {em:'🛢️', nm:'Puffer-Barrel',  ds:'Puffer',                 col:'yellow', cat:'storage',   capacity:32, portDef:[{d:'l',role:'in'},{d:'r',role:'out'}]},
-  // PROCESSORS
-  'depot':  {em:'🏭', nm:'Verarbeitungsstation',ds:'In→ verarbeiten →Out', col:'purple',cat:'processor',capacity:6, procTime:2.0, portDef:[{d:'l',role:'in'},{d:'r',role:'out'}]},
-  'filter': {em:'🔀', nm:'Filter/Sortierer',ds:'Sortiert Items',        col:'blue',   cat:'processor', capacity:6,  procTime:0.5, portDef:[{d:'l',role:'in'},{d:'r',role:'out'},{d:'b',role:'out'}]},
-  // CONTROL
-  'comp':   {em:'📊', nm:'Comparator',     ds:'Misst Füllstand',        col:'red',    cat:'control',   capacity:0,  portDef:[{d:'l',role:'in'},{d:'r',role:'out'}]},
-  // DESTINATION
-  'player': {em:'🧑‍🎮',nm:'Spieler',        ds:'Nimmt Items',            col:'purple', cat:'dest',      capacity:999,portDef:[{d:'l',role:'in'}]},
-  'trash':  {em:'🗑️', nm:'Müll',           ds:'Vernichtet Items',       col:'gray',   cat:'dest',      capacity:999,portDef:[{d:'l',role:'in'},{d:'t',role:'in'}]},
+const NODE_TYPES = {
+  'conveyer-in':  { icon: '📦', name: 'Eingangs-Conveyer', sub: 'NUR EINGANG',      color: '#f97316', connColor: 'orange' },
+  'conveyer-out': { icon: '📦', name: 'Ausgangs-Conveyer', sub: 'NUR AUSGANG',      color: '#38bdf8', connColor: 'blue' },
+  'frogport-in':  { icon: '🐸', name: 'Frogport IN',       sub: 'nur aufnehmen',    color: '#fb923c', connColor: 'orange' },
+  'frogport-out': { icon: '🐸', name: 'Frogport OUT',      sub: 'nur abgeben',      color: '#38bdf8', connColor: 'blue' },
+  'vault-main':   { icon: '🗄️', name: 'Haupt-Vault',       sub: 'Hauptlager',       color: '#22c55e', connColor: 'green' },
+  'vault-buffer': { icon: '🛡️', name: 'Puffer-Vault',      sub: 'Überlauf-Schutz',  color: '#facc15', connColor: 'orange' },
+  'comparator':   { icon: '📊', name: 'Comparator',         sub: 'Füllstand messen', color: '#ef4444', connColor: 'red' },
+  'redstone':     { icon: '🔴', name: 'Redstone',           sub: 'Signal bei Stau',  color: '#ef4444', connColor: 'red' },
+  'clutch':       { icon: '⚡', name: 'Kupplung',           sub: 'Prod. stoppen',    color: '#ef4444', connColor: 'red' },
+  'machine':      { icon: '⚙️', name: 'Maschine',           sub: 'Produktion',       color: '#94a3b8', connColor: 'gray' },
+  'player':       { icon: '🧑‍🎮', name: 'Spieler',          sub: 'Anfragen',          color: '#a78bfa', connColor: 'gray' },
+  'label':        { icon: '🏷️', name: 'Label',              sub: '',                  color: '#64748b', connColor: 'gray' },
 };
 
-const GROUPS=[
-  {title:'— MASCHINEN —',    keys:['mill','press','mixer','farm','mine']},
-  {title:'— FÖRDERTECHNIK —',keys:['conv','fpin','fpout']},
-  {title:'— LAGER —',        keys:['vault','barrel']},
-  {title:'— VERARBEITUNG —', keys:['depot','filter']},
-  {title:'— KONTROLLE —',    keys:['comp','player','trash']},
-];
-
-// ═══════════════════════════════════════════════════ STATE
-let nodes=[], edges=[], uid=1;
-let vp={x:60,y:60,z:1};
-let sel=null, drag=null, resize=null, connFrom=null, panning=false, panStart={};
-let dragType=null, ctxTgt=null;
-let simRunning=true, simSpeed=1, simTime=0, lastTs=null;
-let items=[]; // {id,x,y,edgeId,t,symbol,col,fromNode}
-let totalProd=0, totalJams=0;
-
-// ═══════════════════════════════════════════════════ SIDEBAR
-function buildSB(){
-  const sb=document.getElementById('sb'); sb.innerHTML='';
-  GROUPS.forEach(g=>{
-    const c=document.createElement('div'); c.className='cat'; c.textContent=g.title; sb.appendChild(c);
-    g.keys.forEach(k=>{
-      const d=DEFS[k], el=document.createElement('div'); el.className='sn'; el.draggable=true;
-      const rate=d.prodRate?`<div class="rate">⚡ ${d.prodRate}/s</div>`:d.procTime?`<div class="rate">⏱ ${d.procTime}s/item</div>`:'';
-      el.innerHTML=`<div class="em">${d.em}</div><div class="inf"><div class="nm" style="color:${COLORS[d.col]}">${d.nm}</div><div class="ds">${d.ds}</div>${rate}</div>`;
-      el.addEventListener('click',()=>addNodeCenter(k));
-      el.addEventListener('dragstart',()=>dragType=k);
-      sb.appendChild(el);
-    });
-  });
-}
-buildSB();
-
-// SVG markers
-function buildMarkers(){
-  const d=document.getElementById('svgD');
-  Object.entries(COLORS).forEach(([n,c])=>{
-    d.innerHTML+=`<marker id="a-${n}" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-      <path d="M0,0.5 L0,6.5 L7,3.5 z" fill="${c}"/></marker>`;
-  });
-}
-buildMarkers();
-
-// ═══════════════════════════════════════════════════ VIEWPORT
-function w2s(x,y){return{x:x*vp.z+vp.x, y:y*vp.z+vp.y};}
-function s2w(x,y){return{x:(x-vp.x)/vp.z, y:(y-vp.y)/vp.z};}
-function applyVP(){
-  document.getElementById('ndLayer').style.transform=`translate(${vp.x}px,${vp.y}px) scale(${vp.z})`;
-  document.getElementById('ndLayer').style.transformOrigin='0 0';
-  document.getElementById('zInfo').textContent=Math.round(vp.z*100)+'%';
-  drawBg(); renderEdges();
-}
-
-// ═══════════════════════════════════════════════════ BG
-function drawBg(){
-  const c=document.getElementById('bgC'), w=document.getElementById('wrap');
-  c.width=w.clientWidth; c.height=w.clientHeight;
-  const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
-  const s=40*vp.z, ox=vp.x%s, oy=vp.y%s;
-  ctx.strokeStyle='#0d1420'; ctx.lineWidth=1;
-  for(let x=ox;x<c.width;x+=s){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
-  for(let y=oy;y<c.height;y+=s){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
-  const ms=s*5, mox=vp.x%ms, moy=vp.y%ms;
-  ctx.strokeStyle='#131e2e'; ctx.lineWidth=1;
-  for(let x=mox;x<c.width;x+=ms){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
-  for(let y=moy;y<c.height;y+=ms){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
-}
-
-// ═══════════════════════════════════════════════════ NODE CREATE
-function mkNode(type,wx,wy,w=140,h=80){
-  const d=DEFS[type]; if(!d) return;
-  const id=uid++;
-  const node={id,type,x:wx,y:wy,w,h,label:d.nm,col:d.col,
-    buffer:[],  // items in this node's buffer
-    timer:0,    // production/processing timer
-    jammed:false,
-    active:false,
-    processQueue:[], // for processors
-    procTimer:0,
-  };
-  nodes.push(node); renderNode(node); return node;
-}
-
-function addNodeCenter(type){
-  const w=document.getElementById('wrap');
-  const cx=(w.clientWidth/2-vp.x)/vp.z-70+(Math.random()-.5)*30;
-  const cy=(w.clientHeight/2-vp.y)/vp.z-40+(Math.random()-.5)*30;
-  mkNode(type,Math.round(cx/10)*10,Math.round(cy/10)*10);
-}
-
-function renderNode(node){
-  const d=DEFS[node.type], col=COLORS[node.col];
-  const layer=document.getElementById('ndLayer');
-  const old=document.getElementById('nd-'+node.id); if(old) old.remove();
-  const el=document.createElement('div');
-  el.className='nd'; el.id='nd-'+node.id;
-  el.style.cssText=`left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;`;
-
-  const ports=d.portDef.map(p=>`<div class="port ${p.role==='in'?'in-port':p.role==='out'?'out-port':''}"
-    data-d="${p.d}" id="p-${node.id}-${p.d}"
-    onmousedown="portDown(event,${node.id},'${p.d}','${p.role}')"></div>`).join('');
-
-  const hasBar=d.capacity>0;
-  el.innerHTML=`<div class="nd-inner" id="ndi-${node.id}" style="color:${col};border-color:${col};box-shadow:0 0 16px ${col}22,inset 0 0 20px ${col}08;">
-    <div class="nd-icon">${d.em}</div>
-    <input class="nd-lbl" id="nlbl-${node.id}" value="${node.label}" style="color:${col};"
-      onchange="updLbl(${node.id},this.value)" onmousedown="e=>{e.stopPropagation()}" onclick="event.stopPropagation()">
-    <div class="nd-sub">${d.ds}</div>
-    ${hasBar?`<div class="nd-bar"><div class="nd-fill" id="nf-${node.id}" style="background:${col};width:0%"></div></div>`:''}
-    <div class="nd-count" id="nc-${node.id}"></div>
-    ${ports}
-    <div class="rh" onmousedown="resDown(event,${node.id})"></div>
-  </div>`;
-  el.addEventListener('mousedown',e=>ndDown(e,node.id));
-  el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();showCtx(e,node.id,'node');});
-  layer.appendChild(el);
-}
-
-function setNdPos(n){
-  const el=document.getElementById('nd-'+n.id); if(!el) return;
-  el.style.left=n.x+'px'; el.style.top=n.y+'px';
-  el.style.width=n.w+'px'; el.style.height=n.h+'px';
-}
-
-function updNdUI(n){
-  const d=DEFS[n.type];
-  const el=document.getElementById('nd-'+n.id); if(!el) return;
-  el.classList.toggle('jammed',n.jammed);
-  el.classList.toggle('active',n.active&&!n.jammed);
-  el.classList.toggle('sel',sel===n.id);
-  const fill=document.getElementById('nf-'+n.id);
-  if(fill&&d.capacity>0){
-    const pct=Math.min(100,(n.buffer.length/d.capacity)*100);
-    fill.style.width=pct+'%';
-    fill.style.background=pct>80?COLORS.red:pct>50?COLORS.yellow:COLORS[n.col];
+// ─── CANVAS / GRID ───────────────────────────────────────────────────────────
+function drawGrid() {
+  const canvas = document.getElementById('grid');
+  const wrap = document.getElementById('canvasWrap');
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#1e2736';
+  ctx.lineWidth = 1;
+  const step = 32;
+  const ox = pan.x % step;
+  const oy = pan.y % step;
+  for (let x = ox; x < canvas.width; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
   }
-  const cnt=document.getElementById('nc-'+n.id);
-  if(cnt){
-    if(d.capacity>0) cnt.textContent=`${n.buffer.length}/${d.capacity}`;
-    else if(d.prodRate) cnt.textContent=`⚡${d.prodRate}/s`;
+  for (let y = oy; y < canvas.height; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+}
+window.addEventListener('resize', () => { drawGrid(); renderConnections(); });
+drawGrid();
+
+// ─── NODE CREATION ───────────────────────────────────────────────────────────
+function createNode(type, x, y, customLabel) {
+  const def = NODE_TYPES[type];
+  if (!def) return;
+  const id = nextId++;
+  const node = { id, type, x, y, label: customLabel || def.name, color: def.color, connColor: def.connColor };
+  nodes.push(node);
+  renderNode(node);
+  return node;
+}
+
+function addNodeCenter(type) {
+  const wrap = document.getElementById('canvasWrap');
+  const x = wrap.clientWidth / 2 - pan.x - 65;
+  const y = wrap.clientHeight / 2 - pan.y - 45;
+  createNode(type, x + (Math.random()-0.5)*40, y + (Math.random()-0.5)*40);
+}
+
+function renderNode(node) {
+  const def = NODE_TYPES[node.type];
+  const container = document.getElementById('nodes');
+
+  const el = document.createElement('div');
+  el.className = 'node-el';
+  el.id = 'node-' + node.id;
+  el.style.left = (node.x + pan.x) + 'px';
+  el.style.top = (node.y + pan.y) + 'px';
+
+  el.innerHTML = `
+    <div class="node-body" id="body-${node.id}" style="color:${node.color}; border-color:${node.color}; box-shadow: 0 0 12px ${node.color}33;">
+      <div class="node-icon">${def.icon}</div>
+      <input class="node-label-input" id="label-${node.id}" value="${node.label}" style="color:${node.color};"
+        onchange="updateLabel(${node.id}, this.value)"
+        onmousedown="event.stopPropagation()"
+        onclick="event.stopPropagation()">
+      <div class="node-sub">${def.sub}</div>
+      <div class="port right" id="port-${node.id}-right" onmousedown="startConnection(event,${node.id},'right')"></div>
+      <div class="port left"  id="port-${node.id}-left"  onmousedown="startConnection(event,${node.id},'left')"></div>
+      <div class="port bottom" id="port-${node.id}-bottom" onmousedown="startConnection(event,${node.id},'bottom')"></div>
+      <div class="port top"   id="port-${node.id}-top"   onmousedown="startConnection(event,${node.id},'top')"></div>
+    </div>`;
+
+  el.addEventListener('mousedown', (e) => nodeMouseDown(e, node.id));
+  el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showCtxMenu(e, node.id); });
+  container.appendChild(el);
+}
+
+function updateNodePosition(node) {
+  const el = document.getElementById('node-' + node.id);
+  if (el) {
+    el.style.left = (node.x + pan.x) + 'px';
+    el.style.top = (node.y + pan.y) + 'px';
   }
 }
 
-function updLbl(id,v){const n=nodes.find(x=>x.id===id);if(n)n.label=v;}
-
-// ═══════════════════════════════════════════════════ EDGES
-function portPos(nid,dir){
-  const n=nodes.find(x=>x.id===nid); if(!n) return null;
-  const s=w2s(n.x,n.y); const sw=n.w*vp.z, sh=n.h*vp.z;
-  if(dir==='r') return{x:s.x+sw,   y:s.y+sh/2};
-  if(dir==='l') return{x:s.x,       y:s.y+sh/2};
-  if(dir==='b') return{x:s.x+sw/2, y:s.y+sh};
-  if(dir==='t') return{x:s.x+sw/2, y:s.y};
+function updateLabel(id, val) {
+  const node = nodes.find(n => n.id === id);
+  if (node) node.label = val;
 }
 
-function addEdge(fromId,fp,toId,tp){
-  const dup=edges.find(e=>(e.from===fromId&&e.fp===fp&&e.to===toId&&e.tp===tp));
-  if(dup) return;
-  const fromN=nodes.find(x=>x.id===fromId);
-  edges.push({id:uid++,from:fromId,fp,to:toId,tp,col:fromN?.col||'gray',
-    items:[], // items currently on this edge
-    jammed:false});
-  renderEdges();
+// ─── DRAG ────────────────────────────────────────────────────────────────────
+let dragNodeType = null;
+function startDrag(e, type) { dragNodeType = type; }
+
+function onDrop(e) {
+  if (!dragNodeType) return;
+  const wrap = document.getElementById('canvasWrap');
+  const rect = wrap.getBoundingClientRect();
+  const x = e.clientX - rect.left - pan.x - 65;
+  const y = e.clientY - rect.top - pan.y - 40;
+  createNode(dragNodeType, x, y);
+  dragNodeType = null;
 }
 
-function buildPath(p1,d1,p2,d2){
-  const dx=Math.abs(p2.x-p1.x), dy=Math.abs(p2.y-p1.y);
-  const len=Math.max(dx,dy)*0.45+40;
-  const cv=d=>{if(d==='r')return[len,0];if(d==='l')return[-len,0];if(d==='b')return[0,len];return[0,-len];};
-  const [cx1,cy1]=cv(d1); const [cx2,cy2]=cv(d2);
-  return`M${p1.x},${p1.y} C${p1.x+cx1},${p1.y+cy1} ${p2.x+cx2},${p2.y+cy2} ${p2.x},${p2.y}`;
-}
-
-function renderEdges(){
-  const g=document.getElementById('connG'); g.innerHTML='';
-  edges.forEach(e=>{
-    const p1=portPos(e.from,e.fp), p2=portPos(e.to,e.tp); if(!p1||!p2) return;
-    const path=buildPath(p1,e.fp,p2,e.tp);
-    const col=e.jammed?COLORS.red:(COLORS[e.col]||'#64748b');
-    const el=document.createElementNS('http://www.w3.org/2000/svg','path');
-    el.setAttribute('id','e-'+e.id);
-    el.setAttribute('d',path);
-    el.setAttribute('stroke',col);
-    el.setAttribute('stroke-width',Math.max(2,2.5*vp.z));
-    el.setAttribute('fill','none');
-    el.setAttribute('marker-end',`url(#a-${e.jammed?'red':e.col})`);
-    el.setAttribute('opacity',e.jammed?0.9:0.75);
-    el.style.pointerEvents='stroke'; el.style.cursor='pointer';
-    el.addEventListener('contextmenu',ev=>{ev.preventDefault();showCtx(ev,e.id,'edge');});
-    g.appendChild(el);
-  });
-}
-
-// ═══════════════════════════════════════════════════ SIMULATION
-function getPathPoint(p1,d1,p2,d2,t){
-  const dx=Math.abs(p2.x-p1.x), dy=Math.abs(p2.y-p1.y);
-  const len=Math.max(dx,dy)*0.45+40;
-  const cv=d=>{if(d==='r')return[len,0];if(d==='l')return[-len,0];if(d==='b')return[0,len];return[0,-len];};
-  const [cx1,cy1]=cv(d1); const [cx2,cy2]=cv(d2);
-  const ax=p1.x,ay=p1.y,bx=p1.x+cx1,by=p1.y+cy1,cx=p2.x+cx2,cy=p2.y+cy2,dx2=p2.x,dy2=p2.y;
-  const u=1-t;
-  return{x:u*u*u*ax+3*u*u*t*bx+3*u*t*t*cx+t*t*t*dx2, y:u*u*u*ay+3*u*u*t*by+3*u*t*t*cy+t*t*t*dy2};
-}
-
-function simStep(dt){
-  const realDt=dt*simSpeed;
-  simTime+=realDt;
-
-  // 1. MACHINES: produce items into their outgoing edges
-  nodes.forEach(n=>{
-    const d=DEFS[n.type];
-    if(d.cat==='machine'&&d.prodRate){
-      const outEdges=edges.filter(e=>e.from===n.id);
-      if(!outEdges.length){n.active=false;return;}
-      // Check if any output edge is jammed (all full)
-      const hasRoom=outEdges.some(e=>e.items.length<8);
-      if(!hasRoom){n.jammed=true;n.active=false;totalJams++;return;}
-      n.jammed=false; n.active=true;
-      n.timer+=realDt;
-      if(n.timer>=1/d.prodRate){
-        n.timer=0;
-        // Pick a non-full edge
-        const target=outEdges.find(e=>e.items.length<8);
-        if(target){
-          const sym=d.output?d.output.split('→').pop().trim():d.em;
-          target.items.push({id:uid++,t:0,sym,col:COLORS[n.col]});
-          totalProd++;
-        }
-      }
-    }
-    // PROCESSORS
-    if(d.cat==='processor'){
-      const inEdges=edges.filter(e=>e.to===n.id);
-      const outEdges=edges.filter(e=>e.from===n.id);
-      n.jammed=n.buffer.length>=d.capacity;
-      n.active=n.buffer.length>0;
-      if(n.buffer.length>0&&outEdges.length){
-        n.procTimer+=realDt;
-        if(n.procTimer>=d.procTime){
-          n.procTimer=0;
-          const item=n.buffer.shift();
-          const target=outEdges.find(e=>e.items.length<8);
-          if(target) target.items.push({id:uid++,t:0,sym:item.sym,col:item.col});
-          else n.buffer.unshift(item); // put back
-        }
-      }
-    }
-    // STORAGE
-    if(d.cat==='storage'||d.cat==='frogport'){
-      const outEdges=edges.filter(e=>e.from===n.id);
-      n.jammed=n.buffer.length>=d.capacity;
-      n.active=n.buffer.length>0;
-      // Auto-push to output if possible
-      if(n.buffer.length>0&&outEdges.length){
-        n.timer+=realDt;
-        if(n.timer>0.3){
-          n.timer=0;
-          const target=outEdges.find(e=>e.items.length<8);
-          if(target){
-            const item=n.buffer.shift();
-            target.items.push({id:uid++,t:0,sym:item.sym,col:item.col});
-          }
-        }
-      }
-    }
-  });
-
-  // 2. MOVE items along edges
-  const edgeSpeed=2.0*simSpeed;
-  edges.forEach(e=>{
-    const toNode=nodes.find(x=>x.id===e.to);
-    const d=toNode?DEFS[toNode.type]:null;
-    e.jammed=toNode?.jammed||false;
-
-    e.items=e.items.filter(item=>{
-      if(e.jammed&&item.t>0.85){return true;} // stop at end if jammed
-      item.t+=realDt*edgeSpeed*(e.jammed&&item.t>0.7?0:1);
-      if(item.t>=1){
-        // Deliver to node
-        if(toNode&&d){
-          if(d.cat==='dest'){return false;} // consume
-          if(toNode.buffer.length<d.capacity){
-            toNode.buffer.push(item);
-            return false;
-          } else {
-            item.t=0.99; e.jammed=true; return true; // bounce back
-          }
-        }
-        return false;
-      }
-      return true;
-    });
-  });
-
-  // 3. UPDATE UI
-  nodes.forEach(n=>updNdUI(n));
-  renderEdges();
-
-  // 4. DRAW ITEMS on canvas
-  drawItems();
-
-  // Stats
-  document.getElementById('statProd').textContent=totalProd;
-  document.getElementById('statJam').textContent=nodes.filter(n=>n.jammed).length+edges.filter(e=>e.jammed).length;
-  document.getElementById('statStore').textContent=nodes.reduce((a,n)=>a+n.buffer.length,0);
-}
-
-function drawItems(){
-  const c=document.getElementById('simC'), w=document.getElementById('wrap');
-  c.width=w.clientWidth; c.height=w.clientHeight;
-  const ctx=c.getContext('2d');
-  ctx.clearRect(0,0,c.width,c.height);
-
-  edges.forEach(e=>{
-    const p1=portPos(e.from,e.fp), p2=portPos(e.to,e.tp); if(!p1||!p2) return;
-    e.items.forEach(item=>{
-      const pos=getPathPoint(p1,e.fp,p2,e.tp,item.t);
-      const alpha=item.t<0.08?item.t/0.08:item.t>0.9?(1-item.t)/0.1:1;
-      const sz=Math.max(4,6*vp.z);
-
-      // Glow
-      const grad=ctx.createRadialGradient(pos.x,pos.y,0,pos.x,pos.y,sz*3);
-      grad.addColorStop(0,item.col+'cc'); grad.addColorStop(1,item.col+'00');
-      ctx.beginPath(); ctx.arc(pos.x,pos.y,sz*3,0,Math.PI*2);
-      ctx.fillStyle=grad; ctx.globalAlpha=alpha*0.4; ctx.fill();
-
-      // Core
-      ctx.beginPath(); ctx.arc(pos.x,pos.y,sz,0,Math.PI*2);
-      ctx.fillStyle=item.col; ctx.globalAlpha=alpha*0.95; ctx.fill();
-
-      // Symbol text
-      ctx.globalAlpha=alpha;
-      ctx.font=`${Math.max(8,9*vp.z)}px serif`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(item.sym,pos.x,pos.y-sz*1.6);
-      ctx.globalAlpha=1;
-    });
-  });
-}
-
-// ═══════════════════════════════════════════════════ ANIM LOOP
-let raf;
-function loop(ts){
-  if(lastTs===null) lastTs=ts;
-  const dt=Math.min((ts-lastTs)/1000, 0.1);
-  lastTs=ts;
-  if(simRunning) simStep(dt);
-  renderMM();
-  raf=requestAnimationFrame(loop);
-}
-raf=requestAnimationFrame(loop);
-
-// ═══════════════════════════════════════════════════ MINIMAP
-function renderMM(){
-  const mm=document.getElementById('minimap')||document.querySelector('.mm');
-  const c=document.getElementById('mmC'); if(!c) return;
-  c.width=c.parentElement.clientWidth; c.height=c.parentElement.clientHeight;
-  const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
-  if(!nodes.length) return;
-  const xs=nodes.map(n=>n.x), ys=nodes.map(n=>n.y);
-  const xes=nodes.map(n=>n.x+n.w), yes=nodes.map(n=>n.y+n.h);
-  const mnX=Math.min(...xs)-20, mnY=Math.min(...ys)-20;
-  const mxX=Math.max(...xes)+20, mxY=Math.max(...yes)+20;
-  const scX=c.width/(mxX-mnX), scY=c.height/(mxY-mnY), sc=Math.min(scX,scY);
-  nodes.forEach(n=>{
-    const col=COLORS[n.col]||'#64748b';
-    ctx.fillStyle=n.jammed?COLORS.red+'88':col+'55';
-    ctx.strokeStyle=n.jammed?COLORS.red:col;
-    ctx.lineWidth=1;
-    ctx.beginPath();
-    ctx.roundRect((n.x-mnX)*sc,(n.y-mnY)*sc,n.w*sc,n.h*sc,2);
-    ctx.fill(); ctx.stroke();
-  });
-  const wrap=document.getElementById('wrap');
-  ctx.strokeStyle=COLORS.orange; ctx.lineWidth=1.5; ctx.setLineDash([3,2]);
-  ctx.strokeRect((-vp.x/vp.z-mnX)*sc,(-vp.y/vp.z-mnY)*sc,(wrap.clientWidth/vp.z)*sc,(wrap.clientHeight/vp.z)*sc);
-  ctx.setLineDash([]);
-}
-
-// ═══════════════════════════════════════════════════ MOUSE
-function ndDown(e,id){
-  if(e.button!==0||connFrom) return;
+// ─── NODE DRAG ────────────────────────────────────────────────────────────────
+function nodeMouseDown(e, id) {
+  if (e.button !== 0) return;
+  if (connectingFrom) return;
   e.stopPropagation();
-  sel=id;
-  document.querySelectorAll('.nd').forEach(el=>el.classList.remove('sel'));
-  document.getElementById('nd-'+id)?.classList.add('sel');
-  const n=nodes.find(x=>x.id===id);
-  const el=document.getElementById('nd-'+id);
-  const rect=el.getBoundingClientRect();
-  drag={id, ox:(e.clientX-rect.left)/vp.z, oy:(e.clientY-rect.top)/vp.z};
+  selectedNode = id;
+  draggingNode = id;
+  const node = nodes.find(n => n.id === id);
+  const el = document.getElementById('node-' + id);
+  const rect = el.getBoundingClientRect();
+  dragOffset.x = e.clientX - rect.left;
+  dragOffset.y = e.clientY - rect.top;
+  document.querySelectorAll('.node-body').forEach(b => b.classList.remove('selected'));
+  document.getElementById('body-' + id)?.classList.add('selected');
 }
-function resDown(e,id){
-  e.stopPropagation();e.preventDefault();
-  const n=nodes.find(x=>x.id===id);
-  resize={id,sx:e.clientX,sy:e.clientY,w0:n.w,h0:n.h};
+
+// ─── CONNECTIONS ──────────────────────────────────────────────────────────────
+function getPortPos(nodeId, port) {
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return null;
+  const el = document.getElementById('node-' + nodeId);
+  if (!el) return null;
+  const wrap = document.getElementById('canvasWrap');
+  const wRect = wrap.getBoundingClientRect();
+  const eRect = el.getBoundingClientRect();
+  const w = eRect.width, h = eRect.height;
+  const bx = eRect.left - wRect.left, by = eRect.top - wRect.top;
+  if (port === 'right')  return { x: bx + w,     y: by + h/2 };
+  if (port === 'left')   return { x: bx,          y: by + h/2 };
+  if (port === 'bottom') return { x: bx + w/2,    y: by + h };
+  if (port === 'top')    return { x: bx + w/2,    y: by };
+  return null;
 }
-function portDown(e,id,dir,role){
-  e.stopPropagation();e.preventDefault();
-  connFrom={id,dir,role};
-  document.getElementById(`p-${id}-${dir}`)?.classList.add('lit');
-}
-function wDown(e){
-  if(e.button===1||(e.button===0&&e.altKey)){
-    e.preventDefault(); panning=true;
-    panStart={mx:e.clientX,my:e.clientY,px:vp.x,py:vp.y};
-    document.getElementById('wrap').style.cursor='grabbing'; return;
-  }
-  if(connFrom&&e.button===0){connFrom=null;clearTmp();document.querySelectorAll('.port').forEach(p=>p.classList.remove('lit'));}
-  if(e.button===0&&!drag){sel=null;document.querySelectorAll('.nd').forEach(el=>el.classList.remove('sel'));hideCtx();}
-}
-function wMove(e){
-  const wr=document.getElementById('wrap'), rect=wr.getBoundingClientRect();
-  const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
-  if(panning){vp.x=panStart.px+(e.clientX-panStart.mx);vp.y=panStart.py+(e.clientY-panStart.my);applyVP();return;}
-  if(resize){
-    const n=nodes.find(x=>x.id===resize.id);if(!n)return;
-    n.w=Math.max(120,resize.w0+(e.clientX-resize.sx)/vp.z);
-    n.h=Math.max(70, resize.h0+(e.clientY-resize.sy)/vp.z);
-    setNdPos(n);renderEdges();return;
-  }
-  if(drag){
-    const n=nodes.find(x=>x.id===drag.id);if(!n)return;
-    const mw=s2w(sx,sy);
-    n.x=Math.round((mw.x-drag.ox)/10)*10;
-    n.y=Math.round((mw.y-drag.oy)/10)*10;
-    setNdPos(n);renderEdges();return;
-  }
-  if(connFrom){
-    const p1=portPos(connFrom.id,connFrom.dir);
-    if(p1){
-      const dx=sx-p1.x,dy=sy-p1.y,len=Math.sqrt(dx*dx+dy*dy)*0.4;
-      const cv=d=>{if(d==='r')return[len,0];if(d==='l')return[-len,0];if(d==='b')return[0,len];return[0,-len];};
-      const [cx1,cy1]=cv(connFrom.dir);
-      document.getElementById('tmpG').innerHTML=
-        `<path d="M${p1.x},${p1.y} C${p1.x+cx1},${p1.y+cy1} ${sx-cx1*.3},${sy-cy1*.3} ${sx},${sy}"
-        stroke="#f97316" stroke-width="2" fill="none" stroke-dasharray="8,4" opacity=".7"/>`;
-    }
-  }
-}
-function wUp(e){
-  if(panning){panning=false;document.getElementById('wrap').style.cursor='default';applyVP();return;}
-  drag=null;resize=null;
-  if(connFrom){
-    const el=document.elementFromPoint(e.clientX,e.clientY);
-    if(el&&el.classList.contains('port')){
-      const parts=el.id.split('-'); // p-{id}-{dir}
-      const toId=parseInt(parts[1]),toDir=parts[2];
-      if(toId!==connFrom.id) addEdge(connFrom.id,connFrom.dir,toId,toDir);
-    }
-    connFrom=null;clearTmp();document.querySelectorAll('.port').forEach(p=>p.classList.remove('lit'));
-  }
-}
-function clearTmp(){document.getElementById('tmpG').innerHTML='';}
-function wWheel(e){
+
+function startConnection(e, nodeId, port) {
+  e.stopPropagation();
   e.preventDefault();
-  const wr=document.getElementById('wrap'),rect=wr.getBoundingClientRect();
-  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  const delta=e.deltaY>0?0.88:1.13;
-  const nz=Math.min(3,Math.max(0.12,vp.z*delta));
-  vp.x=mx-(mx-vp.x)*(nz/vp.z); vp.y=my-(my-vp.y)*(nz/vp.z); vp.z=nz;
-  applyVP();
-}
-function wDrop(e){
-  if(!dragType)return;
-  const wr=document.getElementById('wrap'),rect=wr.getBoundingClientRect();
-  const wx=(e.clientX-rect.left-vp.x)/vp.z-70, wy=(e.clientY-rect.top-vp.y)/vp.z-40;
-  mkNode(dragType,Math.round(wx/10)*10,Math.round(wy/10)*10);
-  dragType=null;
+  connectingFrom = { nodeId, port };
+  document.getElementById(`port-${nodeId}-${port}`)?.classList.add('active');
 }
 
-// ═══════════════════════════════════════════════════ CTX MENU
-function showCtx(e,id,type){
-  ctxTgt={id,type};
-  const m=document.getElementById('ctx');
-  m.style.left=e.clientX+'px'; m.style.top=e.clientY+'px'; m.style.display='block';
-  if(type==='node'){
-    const n=nodes.find(x=>x.id===id);
-    m.innerHTML=`
-      <div class="ci" onclick="ctxDo('lbl')">✏️ Label</div>
-      <div class="ci" onclick="ctxDo('col')">🎨 Farbe (${Object.keys(COLORS).join('/')})</div>
-      <div class="ci" onclick="ctxDo('clr')">🧹 Buffer leeren</div>
-      <div class="csep"></div>
-      <div class="ci" onclick="ctxDo('dup')">📋 Duplizieren</div>
-      <div class="csep"></div>
-      <div class="ci r" onclick="ctxDo('del')">🗑 Löschen</div>`;
-  } else {
-    m.innerHTML=`<div class="ci" onclick="ctxDo('edel')">🗑 Verbindung löschen</div>`;
+function finishConnection(nodeId, port) {
+  if (!connectingFrom) return;
+  if (connectingFrom.nodeId === nodeId) { connectingFrom = null; clearTempConn(); return; }
+  const from = connectingFrom;
+  connectingFrom = null;
+  clearTempConn();
+  document.querySelectorAll('.port').forEach(p => p.classList.remove('active'));
+  // Avoid duplicate
+  const exists = connections.find(c =>
+    (c.from === from.nodeId && c.fromPort === from.port && c.to === nodeId && c.toPort === port) ||
+    (c.from === nodeId && c.fromPort === port && c.to === from.nodeId && c.toPort === from.port)
+  );
+  if (exists) return;
+  const fromNode = nodes.find(n => n.id === from.nodeId);
+  connections.push({ id: nextId++, from: from.nodeId, fromPort: from.port, to: nodeId, toPort: port, color: fromNode?.connColor || 'gray' });
+  renderConnections();
+}
+
+function renderConnections() {
+  const g = document.getElementById('connections');
+  g.innerHTML = '';
+  connections.forEach(conn => {
+    const p1 = getPortPos(conn.from, conn.fromPort);
+    const p2 = getPortPos(conn.to, conn.toPort);
+    if (!p1 || !p2) return;
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const cx1 = p1.x + (conn.fromPort === 'right' ? Math.abs(dx)*0.5 : conn.fromPort === 'left' ? -Math.abs(dx)*0.5 : 0);
+    const cy1 = p1.y + (conn.fromPort === 'bottom' ? Math.abs(dy)*0.5 : conn.fromPort === 'top' ? -Math.abs(dy)*0.5 : 0);
+    const cx2 = p2.x + (conn.toPort === 'left' ? -Math.abs(dx)*0.5 : conn.toPort === 'right' ? Math.abs(dx)*0.5 : 0);
+    const cy2 = p2.y + (conn.toPort === 'top' ? -Math.abs(dy)*0.5 : conn.toPort === 'bottom' ? Math.abs(dy)*0.5 : 0);
+    const colorMap = { orange: '#f97316', blue: '#38bdf8', green: '#22c55e', red: '#ef4444', gray: '#64748b' };
+    const col = colorMap[conn.color] || '#64748b';
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${p1.x},${p1.y} C${cx1},${cy1} ${cx2},${cy2} ${p2.x},${p2.y}`);
+    path.setAttribute('stroke', col);
+    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('marker-end', `url(#arrow-${conn.color})`);
+    path.setAttribute('opacity', '0.85');
+    path.style.cursor = 'pointer';
+    path.addEventListener('contextmenu', (e) => { e.preventDefault(); showCtxMenuConn(e, conn.id); });
+    g.appendChild(path);
+  });
+}
+
+function clearTempConn() {
+  document.getElementById('temp-conn').innerHTML = '';
+}
+
+function drawTempConn(x2, y2) {
+  if (!connectingFrom) return;
+  const p1 = getPortPos(connectingFrom.nodeId, connectingFrom.port);
+  if (!p1) return;
+  const g = document.getElementById('temp-conn');
+  const dx = x2 - p1.x;
+  const cx1 = p1.x + (connectingFrom.port === 'right' ? Math.abs(dx)*0.4 : connectingFrom.port === 'left' ? -Math.abs(dx)*0.4 : 0);
+  const cy1 = p1.y;
+  const cx2 = x2 - (connectingFrom.port === 'right' ? Math.abs(dx)*0.4 : 0);
+  const cy2 = y2;
+  g.innerHTML = `<path d="M${p1.x},${p1.y} C${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}" stroke="#f97316" stroke-width="2" fill="none" stroke-dasharray="6,4" opacity="0.7"/>`;
+}
+
+// ─── CANVAS MOUSE ─────────────────────────────────────────────────────────────
+function canvasMouseDown(e) {
+  if (connectingFrom) { connectingFrom = null; clearTempConn(); return; }
+  if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    isPanning = true; panStart = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    document.getElementById('canvasWrap').style.cursor = 'grabbing';
+    return;
+  }
+  selectedNode = null;
+  document.querySelectorAll('.node-body').forEach(b => b.classList.remove('selected'));
+  hideCtxMenu();
+}
+
+function canvasMouseMove(e) {
+  const wrap = document.getElementById('canvasWrap');
+  const rect = wrap.getBoundingClientRect();
+  mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+  if (connectingFrom) { drawTempConn(mousePos.x, mousePos.y); return; }
+
+  if (isPanning) {
+    pan.x = e.clientX - panStart.x;
+    pan.y = e.clientY - panStart.y;
+    drawGrid();
+    nodes.forEach(n => updateNodePosition(n));
+    renderConnections();
+    return;
+  }
+
+  if (draggingNode !== null) {
+    const node = nodes.find(n => n.id === draggingNode);
+    if (!node) return;
+    node.x = e.clientX - rect.left - dragOffset.x - pan.x;
+    node.y = e.clientY - rect.top - dragOffset.y - pan.y;
+    // Snap to grid
+    node.x = Math.round(node.x / 16) * 16;
+    node.y = Math.round(node.y / 16) * 16;
+    updateNodePosition(node);
+    renderConnections();
   }
 }
-function hideCtx(){document.getElementById('ctx').style.display='none';}
-document.addEventListener('click',hideCtx);
-function ctxDo(a){
-  hideCtx();
-  if(!ctxTgt) return;
-  if(ctxTgt.type==='node'){
-    const n=nodes.find(x=>x.id===ctxTgt.id); if(!n) return;
-    if(a==='lbl'){const i=document.getElementById('nlbl-'+n.id);if(i){i.focus();i.select();}}
-    if(a==='col'){const c=prompt('Farbe:',n.col);if(c&&COLORS[c]){n.col=c;renderNode(n);renderEdges();}}
-    if(a==='clr'){n.buffer=[];n.jammed=false;}
-    if(a==='dup') mkNode(n.type,n.x+30,n.y+30,n.w,n.h);
-    if(a==='del'){
-      nodes=nodes.filter(x=>x.id!==ctxTgt.id);
-      edges=edges.filter(e=>e.from!==ctxTgt.id&&e.to!==ctxTgt.id);
-      document.getElementById('nd-'+ctxTgt.id)?.remove();
-      renderEdges();
+
+function canvasMouseUp(e) {
+  if (isPanning) { isPanning = false; document.getElementById('canvasWrap').style.cursor = 'default'; return; }
+  draggingNode = null;
+
+  // Check if mouse is over a port
+  if (connectingFrom) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    if (el && el.classList.contains('port')) {
+      const id_str = el.id; // port-{id}-{dir}
+      const parts = id_str.split('-');
+      const nodeId = parseInt(parts[1]);
+      const portDir = parts[2];
+      finishConnection(nodeId, portDir);
+    } else {
+      connectingFrom = null; clearTempConn();
+      document.querySelectorAll('.port').forEach(p => p.classList.remove('active'));
     }
-  } else if(a==='edel'){
-    edges=edges.filter(x=>x.id!==ctxTgt.id); renderEdges();
   }
 }
 
-// ═══════════════════════════════════════════════════ KEYBOARD
-document.addEventListener('keydown',e=>{
-  if(document.activeElement.tagName==='INPUT') return;
-  if(e.key==='Delete'||e.key==='Backspace'){
-    if(sel){nodes=nodes.filter(x=>x.id!==sel);edges=edges.filter(e=>e.from!==sel&&e.to!==sel);
-      document.getElementById('nd-'+sel)?.remove();sel=null;renderEdges();}
+function onWheel(e) {
+  e.preventDefault();
+}
+
+// ─── CONTEXT MENU ─────────────────────────────────────────────────────────────
+function showCtxMenu(e, nodeId) {
+  ctxTarget = { type: 'node', id: nodeId };
+  const menu = document.getElementById('ctxMenu');
+  menu.style.display = 'block';
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.innerHTML = `
+    <div class="ctx-item" onclick="ctxAction('label')">✏️ Label bearbeiten</div>
+    <div class="ctx-item" onclick="ctxAction('color')">🎨 Farbe ändern</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="ctxAction('duplicate')">📋 Duplizieren</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item red" onclick="ctxAction('delete')">🗑 Löschen</div>`;
+}
+
+function showCtxMenuConn(e, connId) {
+  ctxTarget = { type: 'conn', id: connId };
+  const menu = document.getElementById('ctxMenu');
+  menu.style.display = 'block';
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.innerHTML = `
+    <div class="ctx-item" onclick="ctxActionConn('color')">🎨 Farbe ändern</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item red" onclick="ctxActionConn('delete')">🗑 Verbindung löschen</div>`;
+}
+
+function hideCtxMenu() { document.getElementById('ctxMenu').style.display = 'none'; }
+document.addEventListener('click', hideCtxMenu);
+
+function ctxAction(action) {
+  hideCtxMenu();
+  if (!ctxTarget || ctxTarget.type !== 'node') return;
+  const node = nodes.find(n => n.id === ctxTarget.id);
+  if (!node) return;
+  if (action === 'label') {
+    const inp = document.getElementById('label-' + node.id);
+    if (inp) { inp.focus(); inp.select(); }
+  } else if (action === 'color') {
+    const colors = ['#f97316','#38bdf8','#22c55e','#facc15','#ef4444','#a78bfa','#94a3b8','#64748b','#fb923c'];
+    const c = prompt('Farbe (Hex):', node.color);
+    if (c) {
+      node.color = c;
+      const body = document.getElementById('body-' + node.id);
+      if (body) { body.style.color = c; body.style.borderColor = c; body.style.boxShadow = `0 0 12px ${c}33`; }
+      const inp = document.getElementById('label-' + node.id);
+      if (inp) inp.style.color = c;
+    }
+  } else if (action === 'duplicate') {
+    createNode(node.type, node.x + 32, node.y + 32, node.label);
+  } else if (action === 'delete') {
+    deleteNode(node.id);
   }
-  if(e.key==='Escape'){connFrom=null;clearTmp();document.querySelectorAll('.port').forEach(p=>p.classList.remove('lit'));}
-  if(e.key===' '){e.preventDefault();toggleRun();}
+}
+
+function ctxActionConn(action) {
+  hideCtxMenu();
+  if (!ctxTarget || ctxTarget.type !== 'conn') return;
+  const conn = connections.find(c => c.id === ctxTarget.id);
+  if (!conn) return;
+  if (action === 'delete') {
+    connections = connections.filter(c => c.id !== ctxTarget.id);
+    renderConnections();
+  } else if (action === 'color') {
+    const c = prompt('Farbe (orange/blue/green/red/gray):', conn.color);
+    if (c) { conn.color = c; renderConnections(); }
+  }
+}
+
+function deleteNode(id) {
+  nodes = nodes.filter(n => n.id !== id);
+  connections = connections.filter(c => c.from !== id && c.to !== id);
+  const el = document.getElementById('node-' + id);
+  if (el) el.remove();
+  renderConnections();
+}
+
+// ─── KEYBOARD ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (document.activeElement.tagName === 'INPUT') return;
+    if (selectedNode) { deleteNode(selectedNode); selectedNode = null; }
+  }
+  if (e.key === 'Escape') { connectingFrom = null; clearTempConn(); document.querySelectorAll('.port').forEach(p => p.classList.remove('active')); }
 });
 
-// ═══════════════════════════════════════════════════ CONTROLS
-function toggleRun(){
-  simRunning=!simRunning; lastTs=null;
-  const b=document.getElementById('runBtn');
-  b.textContent=simRunning?'▶ Läuft':'⏸ Pause';
-  b.className=simRunning?'btn on':'btn';
-}
-function stepOnce(){simRunning=false;lastTs=null;document.getElementById('runBtn').textContent='⏸ Pause';document.getElementById('runBtn').className='btn';simStep(0.05);}
-function setSpeed(s){simSpeed=s;}
-function zoomIn(){const w=document.getElementById('wrap');vp.x=w.clientWidth/2-(w.clientWidth/2-vp.x)*1.2;vp.y=w.clientHeight/2-(w.clientHeight/2-vp.y)*1.2;vp.z=Math.min(3,vp.z*1.2);applyVP();}
-function zoomOut(){const w=document.getElementById('wrap');vp.x=w.clientWidth/2-(w.clientWidth/2-vp.x)*.83;vp.y=w.clientHeight/2-(w.clientHeight/2-vp.y)*.83;vp.z=Math.max(.12,vp.z*.83);applyVP();}
-function resetView(){vp={x:60,y:80,z:1};applyVP();}
-function clearAll(){
-  if(!confirm('Alles löschen?')) return;
-  nodes=[];edges=[];items=[];totalProd=0;totalJams=0;
-  document.getElementById('ndLayer').innerHTML='';
-  renderEdges();
-}
-function exportJSON(){
-  const d=JSON.stringify({nodes:nodes.map(n=>({...n,buffer:[],processQueue:[],timer:0,procTimer:0})),edges:edges.map(e=>({...e,items:[]}))},null,2);
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'application/json'}));
-  a.download='fabrik.json';a.click();
-}
-function importJSON(e){
-  const f=e.target.files[0];if(!f) return;
-  const r=new FileReader();
-  r.onload=ev=>{try{
-    const d=JSON.parse(ev.target.result);
-    clearAll();
-    (d.nodes||[]).forEach(n=>{nodes.push({...n,buffer:[],processQueue:[],timer:0,procTimer:0,jammed:false,active:false});
-      renderNode(nodes[nodes.length-1]);if(n.id>=uid)uid=n.id+1;});
-    (d.edges||[]).forEach(e=>{edges.push({...e,items:[],jammed:false});});
-    renderEdges();
-  }catch(err){alert('Import fehlgeschlagen');}};
-  r.readAsText(f);
+// ─── CLEAR / EXPORT ───────────────────────────────────────────────────────────
+function clearAll() {
+  if (!confirm('Alles löschen?')) return;
+  nodes = []; connections = [];
+  document.getElementById('nodes').innerHTML = '';
+  document.getElementById('connections').innerHTML = '';
 }
 
-// ═══════════════════════════════════════════════════ EXAMPLE
-function loadExample(){
-  if(nodes.length>0&&!confirm('Aktuelles Layout ersetzen?')) return;
-  clearAll(); vp={x:40,y:60,z:0.9}; applyVP();
-
-  // Row 1: Farm → Conveyer → Frogport IN → Barrel (Puffer) → Vault
-  const farm  = mkNode('farm',  40,  80, 140, 85);
-  const mine  = mkNode('mine',  40, 220, 140, 85);
-  const conv1 = mkNode('conv',  240, 80, 150, 80);
-  const conv2 = mkNode('conv',  240,220, 150, 80);
-  const fpin  = mkNode('fpin',  450,150, 140, 85);
-  const barrel= mkNode('barrel',640,150, 140, 85);
-  const vault = mkNode('vault', 830,150, 140, 85);
-
-  // Row 2: Verarbeitungsstation
-  const depot = mkNode('depot', 640, 320, 150, 90);
-  const fpout = mkNode('fpout', 450, 380, 140, 85);
-  const conv3 = mkNode('conv',  240, 380, 150, 80);
-  const player= mkNode('player',40,  380, 140, 85);
-
-  // Comparator safety
-  const comp  = mkNode('comp',  830, 320, 140, 80);
-
-  setTimeout(()=>{
-    addEdge(farm.id,'r', conv1.id,'l');
-    addEdge(mine.id,'r', conv2.id,'l');
-    addEdge(conv1.id,'r',fpin.id,'l');
-    addEdge(conv2.id,'r',fpin.id,'b');
-    addEdge(fpin.id,'b', barrel.id,'l');
-    addEdge(barrel.id,'r',vault.id,'l');
-    // Output chain
-    addEdge(vault.id,'b', depot.id,'l');
-    addEdge(depot.id,'r', comp.id,'l');
-    addEdge(depot.id,'b', fpout.id,'t');
-    addEdge(fpout.id,'l', conv3.id,'r');
-    addEdge(conv3.id,'l', player.id,'r');
-    renderEdges();
-  },80);
+function exportJSON() {
+  const data = JSON.stringify({ nodes: nodes.map(n => ({...n})), connections }, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'lager-layout.json'; a.click();
 }
 
-window.addEventListener('resize',()=>{drawBg();renderEdges();});
-applyVP();
-loadExample();
+function importJSON() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        clearAll();
+        data.nodes.forEach(n => { nodes.push(n); renderNode(n); if (n.id >= nextId) nextId = n.id+1; });
+        connections = data.connections || [];
+        renderConnections();
+      } catch(err) { alert('Fehler beim Importieren!'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportPNG() {
+  alert('Tipp: Nutze im Browser Strg+P → Als PDF speichern, oder mach einen Screenshot!');
+}
+
+// ─── EXAMPLE ──────────────────────────────────────────────────────────────────
+function loadExample() {
+  if (nodes.length > 0 && !confirm('Aktuelles Layout ersetzen?')) return;
+  clearAll();
+  pan = { x: 0, y: 0 }; drawGrid();
+
+  const m  = createNode('machine',      50,  120);
+  const ci = createNode('conveyer-in', 240,  120);
+  const fi = createNode('frogport-in', 430,  120);
+  const pb = createNode('vault-buffer', 620,  120);
+  const vh = createNode('vault-main',  810,  120);
+
+  const fo = createNode('frogport-out', 430, 280);
+  const co = createNode('conveyer-out', 620, 280);
+  const pl = createNode('player',       810, 280);
+
+  const cp = createNode('comparator',  430, 420);
+  const rs = createNode('redstone',    620, 420);
+  const cl = createNode('clutch',      810, 420);
+
+  setTimeout(() => {
+    connections.push({ id: nextId++, from: m.id,  fromPort: 'right',  to: ci.id, toPort: 'left',   color: 'gray' });
+    connections.push({ id: nextId++, from: ci.id, fromPort: 'right',  to: fi.id, toPort: 'left',   color: 'orange' });
+    connections.push({ id: nextId++, from: fi.id, fromPort: 'right',  to: pb.id, toPort: 'left',   color: 'orange' });
+    connections.push({ id: nextId++, from: pb.id, fromPort: 'right',  to: vh.id, toPort: 'left',   color: 'green' });
+    connections.push({ id: nextId++, from: vh.id, fromPort: 'bottom', to: fo.id, toPort: 'top',    color: 'blue' });
+    connections.push({ id: nextId++, from: fo.id, fromPort: 'right',  to: co.id, toPort: 'left',   color: 'blue' });
+    connections.push({ id: nextId++, from: co.id, fromPort: 'right',  to: pl.id, toPort: 'left',   color: 'blue' });
+    connections.push({ id: nextId++, from: pb.id, fromPort: 'bottom', to: cp.id, toPort: 'top',    color: 'red' });
+    connections.push({ id: nextId++, from: cp.id, fromPort: 'right',  to: rs.id, toPort: 'left',   color: 'red' });
+    connections.push({ id: nextId++, from: rs.id, fromPort: 'right',  to: cl.id, toPort: 'left',   color: 'red' });
+    renderConnections();
+  }, 100);
+}
 </script>
 </body>
 </html>
+
