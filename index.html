@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Mod — Lager Planer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07090d;
+  --surface: #0e1117;
+  --surface2: #161b25;
+  --border: #1e2736;
+  --orange: #f97316;
+  --blue: #38bdf8;
+  --green: #22c55e;
+  --yellow: #facc15;
+  --red: #ef4444;
+  --purple: #a78bfa;
+  --gray: #64748b;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 12px; flex-wrap: wrap;
+}
+.logo { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: var(--orange); letter-spacing: 1px; white-space: nowrap; }
+.logo span { color: var(--text-dim); font-size: 11px; font-weight: 400; margin-left: 8px; font-family: 'JetBrains Mono', monospace; }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--orange); color: var(--orange); }
+.btn.danger:hover { border-color: var(--red); color: var(--red); }
+.btn.success { border-color: var(--green); color: var(--green); }
+.sep { width: 1px; height: 20px; background: var(--border); }
+
+/* Main layout */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar {
+  width: 200px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 12px 8px;
+}
+.sidebar-title { font-size: 9px; color: var(--gray); letter-spacing: 3px; margin-bottom: 8px; padding: 0 4px; }
+.node-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+  cursor: grab; transition: all 0.15s; user-select: none;
+}
+.node-btn:hover { transform: translateX(2px); }
+.node-btn .icon { font-size: 16px; flex-shrink: 0; }
+.node-btn .info { flex: 1; min-width: 0; }
+.node-btn .name { font-size: 11px; font-weight: 700; }
+.node-btn .desc { font-size: 9px; color: var(--gray); margin-top: 1px; }
+
+/* Canvas */
+.canvas-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+canvas#grid { position: absolute; inset: 0; pointer-events: none; }
+svg#canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  cursor: default;
+}
+
+/* Nodes */
+.node-el {
+  position: absolute; cursor: move; user-select: none;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+}
+.node-el:hover .node-body { filter: brightness(1.15); }
+.node-body {
+  border-radius: 10px; padding: 10px 14px; min-width: 130px;
+  background: var(--surface); border: 1.5px solid currentColor;
+  text-align: center; transition: filter 0.15s;
+  position: relative;
+}
+.node-body.selected { box-shadow: 0 0 0 2px var(--orange), 0 0 20px rgba(249,115,22,0.3); }
+.node-icon { font-size: 20px; margin-bottom: 4px; }
+.node-title { font-size: 11px; font-weight: 700; }
+.node-sub { font-size: 9px; color: var(--gray); margin-top: 2px; }
+.node-label-input {
+  background: transparent; border: none; outline: none;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  text-align: center; width: 100%; color: inherit;
+}
+
+/* Connection ports */
+.port {
+  position: absolute; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--surface2); border: 2px solid var(--gray);
+  cursor: crosshair; transition: all 0.15s; z-index: 10;
+}
+.port:hover, .port.active { border-color: var(--orange); background: var(--orange); transform: scale(1.3); }
+.port.right { right: -6px; top: 50%; transform: translateY(-50%); }
+.port.right:hover, .port.right.active { transform: translateY(-50%) scale(1.3); }
+.port.left { left: -6px; top: 50%; transform: translateY(-50%); }
+.port.left:hover, .port.left.active { transform: translateY(-50%) scale(1.3); }
+.port.bottom { bottom: -6px; left: 50%; transform: translateX(-50%); }
+.port.bottom:hover, .port.bottom.active { transform: translateX(-50%) scale(1.3); }
+.port.top { top: -6px; left: 50%; transform: translateX(-50%); }
+.port.top:hover, .port.top.active { transform: translateX(-50%) scale(1.3); }
+
+/* Info panel */
+.info-panel {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: 10px; color: var(--gray); white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Context menu */
+.ctx-menu {
+  position: fixed; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px; z-index: 1000; min-width: 140px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none;
+}
+.ctx-item {
+  padding: 6px 10px; font-size: 11px; cursor: pointer; border-radius: 5px;
+  color: var(--text-dim); transition: all 0.1s;
+}
+.ctx-item:hover { background: var(--surface2); color: var(--text); }
+.ctx-item.red:hover { color: var(--red); }
+.ctx-sep { height: 1px; background: var(--border); margin: 3px 0; }
+
+/* Connection label */
+.conn-label {
+  position: absolute; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 6px; font-size: 9px; color: var(--text-dim);
+  pointer-events: none; white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">LAGER PLANER <span>GodjumpHD · Create Mod</span></div>
+  <div class="toolbar">
+    <button class="btn" onclick="clearAll()">🗑 Alles löschen</button>
+    <div class="sep"></div>
+    <button class="btn" onclick="loadExample()">📦 Beispiel laden</button>
+    <div class="sep"></div>
+    <button class="btn success" onclick="exportPNG()">💾 Als Bild speichern</button>
+    <button class="btn" onclick="exportJSON()">📋 Exportieren</button>
+    <button class="btn" onclick="importJSON()">📂 Importieren</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-title">BAUSTEINE</div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— KERN —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'conveyer-in')" onclick="addNodeCenter('conveyer-in')">
+      <div class="icon">📦</div>
+      <div class="info"><div class="name" style="color:#f97316;">Eingangs-Conveyer</div><div class="desc">NUR EINGANG</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'conveyer-out')" onclick="addNodeCenter('conveyer-out')">
+      <div class="icon">📦</div>
+      <div class="info"><div class="name" style="color:#38bdf8;">Ausgangs-Conveyer</div><div class="desc">NUR AUSGANG</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'frogport-in')" onclick="addNodeCenter('frogport-in')">
+      <div class="icon">🐸</div>
+      <div class="info"><div class="name" style="color:#fb923c;">Frogport IN</div><div class="desc">nur aufnehmen</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'frogport-out')" onclick="addNodeCenter('frogport-out')">
+      <div class="icon">🐸</div>
+      <div class="info"><div class="name" style="color:#38bdf8;">Frogport OUT</div><div class="desc">nur abgeben</div></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— LAGER —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'vault-main')" onclick="addNodeCenter('vault-main')">
+      <div class="icon">🗄️</div>
+      <div class="info"><div class="name" style="color:#22c55e;">Haupt-Vault</div><div class="desc">Hauptlager</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'vault-buffer')" onclick="addNodeCenter('vault-buffer')">
+      <div class="icon">🛡️</div>
+      <div class="info"><div class="name" style="color:#facc15;">Puffer-Vault</div><div class="desc">Überlauf-Schutz</div></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— STEUERUNG —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'comparator')" onclick="addNodeCenter('comparator')">
+      <div class="icon">📊</div>
+      <div class="info"><div class="name" style="color:#ef4444;">Comparator</div><div class="desc">Füllstand messen</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'redstone')" onclick="addNodeCenter('redstone')">
+      <div class="icon">🔴</div>
+      <div class="info"><div class="name" style="color:#ef4444;">Redstone</div><div class="desc">Signal bei Stau</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'clutch')" onclick="addNodeCenter('clutch')">
+      <div class="icon">⚡</div>
+      <div class="info"><div class="name" style="color:#ef4444;">Kupplung</div><div class="desc">Produktion stoppen</div></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:10px;">— SONSTIGES —</div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'machine')" onclick="addNodeCenter('machine')">
+      <div class="icon">⚙️</div>
+      <div class="info"><div class="name" style="color:#94a3b8;">Maschine</div><div class="desc">Produktion</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'player')" onclick="addNodeCenter('player')">
+      <div class="icon">🧑‍🎮</div>
+      <div class="info"><div class="name" style="color:#a78bfa;">Spieler</div><div class="desc">Anfragen</div></div>
+    </div>
+    <div class="node-btn" draggable="true" ondragstart="startDrag(event,'label')" onclick="addNodeCenter('label')">
+      <div class="icon">🏷️</div>
+      <div class="info"><div class="name" style="color:#64748b;">Label</div><div class="desc">Beschriftung</div></div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap" id="canvasWrap"
+    ondragover="event.preventDefault()"
+    ondrop="onDrop(event)"
+    onmousedown="canvasMouseDown(event)"
+    onmousemove="canvasMouseMove(event)"
+    onmouseup="canvasMouseUp(event)"
+    oncontextmenu="event.preventDefault()"
+    onwheel="onWheel(event)">
+
+    <canvas id="grid"></canvas>
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#f97316"/>
+        </marker>
+        <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#38bdf8"/>
+        </marker>
+        <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#22c55e"/>
+        </marker>
+        <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#ef4444"/>
+        </marker>
+        <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#64748b"/>
+        </marker>
+      </defs>
+      <g id="connections"></g>
+      <g id="temp-conn"></g>
+    </svg>
+    <div id="nodes"></div>
+
+    <div class="info-panel" id="infoPanel">
+      Klicke auf Bausteine um sie hinzuzufügen · Ziehe zwischen Ports um zu verbinden · Rechtsklick für Optionen
+    </div>
+  </div>
+</div>
+
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" onclick="ctxAction('label')">✏️ Label bearbeiten</div>
+  <div class="ctx-item" onclick="ctxAction('color')">🎨 Farbe ändern</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="ctxAction('duplicate')">📋 Duplizieren</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item red" onclick="ctxAction('delete')">🗑 Löschen</div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let nodes = [];
+let connections = [];
+let nextId = 1;
+let selectedNode = null;
+let draggingNode = null;
+let dragOffset = { x: 0, y: 0 };
+let connectingFrom = null; // { nodeId, port }
+let ctxTarget = null;
+let dragType = null;
+let pan = { x: 0, y: 0 };
+let isPanning = false;
+let panStart = { x: 0, y: 0 };
+let tempLine = null;
+let mousePos = { x: 0, y: 0 };
+
+const NODE_TYPES = {
+  'conveyer-in':  { icon: '📦', name: 'Eingangs-Conveyer', sub: 'NUR EINGANG',      color: '#f97316', connColor: 'orange' },
+  'conveyer-out': { icon: '📦', name: 'Ausgangs-Conveyer', sub: 'NUR AUSGANG',      color: '#38bdf8', connColor: 'blue' },
+  'frogport-in':  { icon: '🐸', name: 'Frogport IN',       sub: 'nur aufnehmen',    color: '#fb923c', connColor: 'orange' },
+  'frogport-out': { icon: '🐸', name: 'Frogport OUT',      sub: 'nur abgeben',      color: '#38bdf8', connColor: 'blue' },
+  'vault-main':   { icon: '🗄️', name: 'Haupt-Vault',       sub: 'Hauptlager',       color: '#22c55e', connColor: 'green' },
+  'vault-buffer': { icon: '🛡️', name: 'Puffer-Vault',      sub: 'Überlauf-Schutz',  color: '#facc15', connColor: 'orange' },
+  'comparator':   { icon: '📊', name: 'Comparator',         sub: 'Füllstand messen', color: '#ef4444', connColor: 'red' },
+  'redstone':     { icon: '🔴', name: 'Redstone',           sub: 'Signal bei Stau',  color: '#ef4444', connColor: 'red' },
+  'clutch':       { icon: '⚡', name: 'Kupplung',           sub: 'Prod. stoppen',    color: '#ef4444', connColor: 'red' },
+  'machine':      { icon: '⚙️', name: 'Maschine',           sub: 'Produktion',       color: '#94a3b8', connColor: 'gray' },
+  'player':       { icon: '🧑‍🎮', name: 'Spieler',          sub: 'Anfragen',          color: '#a78bfa', connColor: 'gray' },
+  'label':        { icon: '🏷️', name: 'Label',              sub: '',                  color: '#64748b', connColor: 'gray' },
+};
+
+// ─── CANVAS / GRID ───────────────────────────────────────────────────────────
+function drawGrid() {
+  const canvas = document.getElementById('grid');
+  const wrap = document.getElementById('canvasWrap');
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#1e2736';
+  ctx.lineWidth = 1;
+  const step = 32;
+  const ox = pan.x % step;
+  const oy = pan.y % step;
+  for (let x = ox; x < canvas.width; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = oy; y < canvas.height; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+}
+window.addEventListener('resize', () => { drawGrid(); renderConnections(); });
+drawGrid();
+
+// ─── NODE CREATION ───────────────────────────────────────────────────────────
+function createNode(type, x, y, customLabel) {
+  const def = NODE_TYPES[type];
+  if (!def) return;
+  const id = nextId++;
+  const node = { id, type, x, y, label: customLabel || def.name, color: def.color, connColor: def.connColor };
+  nodes.push(node);
+  renderNode(node);
+  return node;
+}
+
+function addNodeCenter(type) {
+  const wrap = document.getElementById('canvasWrap');
+  const x = wrap.clientWidth / 2 - pan.x - 65;
+  const y = wrap.clientHeight / 2 - pan.y - 45;
+  createNode(type, x + (Math.random()-0.5)*40, y + (Math.random()-0.5)*40);
+}
+
+function renderNode(node) {
+  const def = NODE_TYPES[node.type];
+  const container = document.getElementById('nodes');
+
+  const el = document.createElement('div');
+  el.className = 'node-el';
+  el.id = 'node-' + node.id;
+  el.style.left = (node.x + pan.x) + 'px';
+  el.style.top = (node.y + pan.y) + 'px';
+
+  el.innerHTML = `
+    <div class="node-body" id="body-${node.id}" style="color:${node.color}; border-color:${node.color}; box-shadow: 0 0 12px ${node.color}33;">
+      <div class="node-icon">${def.icon}</div>
+      <input class="node-label-input" id="label-${node.id}" value="${node.label}" style="color:${node.color};"
+        onchange="updateLabel(${node.id}, this.value)"
+        onmousedown="event.stopPropagation()"
+        onclick="event.stopPropagation()">
+      <div class="node-sub">${def.sub}</div>
+      <div class="port right" id="port-${node.id}-right" onmousedown="startConnection(event,${node.id},'right')"></div>
+      <div class="port left"  id="port-${node.id}-left"  onmousedown="startConnection(event,${node.id},'left')"></div>
+      <div class="port bottom" id="port-${node.id}-bottom" onmousedown="startConnection(event,${node.id},'bottom')"></div>
+      <div class="port top"   id="port-${node.id}-top"   onmousedown="startConnection(event,${node.id},'top')"></div>
+    </div>`;
+
+  el.addEventListener('mousedown', (e) => nodeMouseDown(e, node.id));
+  el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showCtxMenu(e, node.id); });
+  container.appendChild(el);
+}
+
+function updateNodePosition(node) {
+  const el = document.getElementById('node-' + node.id);
+  if (el) {
+    el.style.left = (node.x + pan.x) + 'px';
+    el.style.top = (node.y + pan.y) + 'px';
+  }
+}
+
+function updateLabel(id, val) {
+  const node = nodes.find(n => n.id === id);
+  if (node) node.label = val;
+}
+
+// ─── DRAG ────────────────────────────────────────────────────────────────────
+let dragNodeType = null;
+function startDrag(e, type) { dragNodeType = type; }
+
+function onDrop(e) {
+  if (!dragNodeType) return;
+  const wrap = document.getElementById('canvasWrap');
+  const rect = wrap.getBoundingClientRect();
+  const x = e.clientX - rect.left - pan.x - 65;
+  const y = e.clientY - rect.top - pan.y - 40;
+  createNode(dragNodeType, x, y);
+  dragNodeType = null;
+}
+
+// ─── NODE DRAG ────────────────────────────────────────────────────────────────
+function nodeMouseDown(e, id) {
+  if (e.button !== 0) return;
+  if (connectingFrom) return;
+  e.stopPropagation();
+  selectedNode = id;
+  draggingNode = id;
+  const node = nodes.find(n => n.id === id);
+  const el = document.getElementById('node-' + id);
+  const rect = el.getBoundingClientRect();
+  dragOffset.x = e.clientX - rect.left;
+  dragOffset.y = e.clientY - rect.top;
+  document.querySelectorAll('.node-body').forEach(b => b.classList.remove('selected'));
+  document.getElementById('body-' + id)?.classList.add('selected');
+}
+
+// ─── CONNECTIONS ──────────────────────────────────────────────────────────────
+function getPortPos(nodeId, port) {
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return null;
+  const el = document.getElementById('node-' + nodeId);
+  if (!el) return null;
+  const wrap = document.getElementById('canvasWrap');
+  const wRect = wrap.getBoundingClientRect();
+  const eRect = el.getBoundingClientRect();
+  const w = eRect.width, h = eRect.height;
+  const bx = eRect.left - wRect.left, by = eRect.top - wRect.top;
+  if (port === 'right')  return { x: bx + w,     y: by + h/2 };
+  if (port === 'left')   return { x: bx,          y: by + h/2 };
+  if (port === 'bottom') return { x: bx + w/2,    y: by + h };
+  if (port === 'top')    return { x: bx + w/2,    y: by };
+  return null;
+}
+
+function startConnection(e, nodeId, port) {
+  e.stopPropagation();
+  e.preventDefault();
+  connectingFrom = { nodeId, port };
+  document.getElementById(`port-${nodeId}-${port}`)?.classList.add('active');
+}
+
+function finishConnection(nodeId, port) {
+  if (!connectingFrom) return;
+  if (connectingFrom.nodeId === nodeId) { connectingFrom = null; clearTempConn(); return; }
+  const from = connectingFrom;
+  connectingFrom = null;
+  clearTempConn();
+  document.querySelectorAll('.port').forEach(p => p.classList.remove('active'));
+  // Avoid duplicate
+  const exists = connections.find(c =>
+    (c.from === from.nodeId && c.fromPort === from.port && c.to === nodeId && c.toPort === port) ||
+    (c.from === nodeId && c.fromPort === port && c.to === from.nodeId && c.toPort === from.port)
+  );
+  if (exists) return;
+  const fromNode = nodes.find(n => n.id === from.nodeId);
+  connections.push({ id: nextId++, from: from.nodeId, fromPort: from.port, to: nodeId, toPort: port, color: fromNode?.connColor || 'gray' });
+  renderConnections();
+}
+
+function renderConnections() {
+  const g = document.getElementById('connections');
+  g.innerHTML = '';
+  connections.forEach(conn => {
+    const p1 = getPortPos(conn.from, conn.fromPort);
+    const p2 = getPortPos(conn.to, conn.toPort);
+    if (!p1 || !p2) return;
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const cx1 = p1.x + (conn.fromPort === 'right' ? Math.abs(dx)*0.5 : conn.fromPort === 'left' ? -Math.abs(dx)*0.5 : 0);
+    const cy1 = p1.y + (conn.fromPort === 'bottom' ? Math.abs(dy)*0.5 : conn.fromPort === 'top' ? -Math.abs(dy)*0.5 : 0);
+    const cx2 = p2.x + (conn.toPort === 'left' ? -Math.abs(dx)*0.5 : conn.toPort === 'right' ? Math.abs(dx)*0.5 : 0);
+    const cy2 = p2.y + (conn.toPort === 'top' ? -Math.abs(dy)*0.5 : conn.toPort === 'bottom' ? Math.abs(dy)*0.5 : 0);
+    const colorMap = { orange: '#f97316', blue: '#38bdf8', green: '#22c55e', red: '#ef4444', gray: '#64748b' };
+    const col = colorMap[conn.color] || '#64748b';
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${p1.x},${p1.y} C${cx1},${cy1} ${cx2},${cy2} ${p2.x},${p2.y}`);
+    path.setAttribute('stroke', col);
+    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('marker-end', `url(#arrow-${conn.color})`);
+    path.setAttribute('opacity', '0.85');
+    path.style.cursor = 'pointer';
+    path.addEventListener('contextmenu', (e) => { e.preventDefault(); showCtxMenuConn(e, conn.id); });
+    g.appendChild(path);
+  });
+}
+
+function clearTempConn() {
+  document.getElementById('temp-conn').innerHTML = '';
+}
+
+function drawTempConn(x2, y2) {
+  if (!connectingFrom) return;
+  const p1 = getPortPos(connectingFrom.nodeId, connectingFrom.port);
+  if (!p1) return;
+  const g = document.getElementById('temp-conn');
+  const dx = x2 - p1.x;
+  const cx1 = p1.x + (connectingFrom.port === 'right' ? Math.abs(dx)*0.4 : connectingFrom.port === 'left' ? -Math.abs(dx)*0.4 : 0);
+  const cy1 = p1.y;
+  const cx2 = x2 - (connectingFrom.port === 'right' ? Math.abs(dx)*0.4 : 0);
+  const cy2 = y2;
+  g.innerHTML = `<path d="M${p1.x},${p1.y} C${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}" stroke="#f97316" stroke-width="2" fill="none" stroke-dasharray="6,4" opacity="0.7"/>`;
+}
+
+// ─── CANVAS MOUSE ─────────────────────────────────────────────────────────────
+function canvasMouseDown(e) {
+  if (connectingFrom) { connectingFrom = null; clearTempConn(); return; }
+  if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    isPanning = true; panStart = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    document.getElementById('canvasWrap').style.cursor = 'grabbing';
+    return;
+  }
+  selectedNode = null;
+  document.querySelectorAll('.node-body').forEach(b => b.classList.remove('selected'));
+  hideCtxMenu();
+}
+
+function canvasMouseMove(e) {
+  const wrap = document.getElementById('canvasWrap');
+  const rect = wrap.getBoundingClientRect();
+  mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+  if (connectingFrom) { drawTempConn(mousePos.x, mousePos.y); return; }
+
+  if (isPanning) {
+    pan.x = e.clientX - panStart.x;
+    pan.y = e.clientY - panStart.y;
+    drawGrid();
+    nodes.forEach(n => updateNodePosition(n));
+    renderConnections();
+    return;
+  }
+
+  if (draggingNode !== null) {
+    const node = nodes.find(n => n.id === draggingNode);
+    if (!node) return;
+    node.x = e.clientX - rect.left - dragOffset.x - pan.x;
+    node.y = e.clientY - rect.top - dragOffset.y - pan.y;
+    // Snap to grid
+    node.x = Math.round(node.x / 16) * 16;
+    node.y = Math.round(node.y / 16) * 16;
+    updateNodePosition(node);
+    renderConnections();
+  }
+}
+
+function canvasMouseUp(e) {
+  if (isPanning) { isPanning = false; document.getElementById('canvasWrap').style.cursor = 'default'; return; }
+  draggingNode = null;
+
+  // Check if mouse is over a port
+  if (connectingFrom) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    if (el && el.classList.contains('port')) {
+      const id_str = el.id; // port-{id}-{dir}
+      const parts = id_str.split('-');
+      const nodeId = parseInt(parts[1]);
+      const portDir = parts[2];
+      finishConnection(nodeId, portDir);
+    } else {
+      connectingFrom = null; clearTempConn();
+      document.querySelectorAll('.port').forEach(p => p.classList.remove('active'));
+    }
+  }
+}
+
+function onWheel(e) {
+  e.preventDefault();
+}
+
+// ─── CONTEXT MENU ─────────────────────────────────────────────────────────────
+function showCtxMenu(e, nodeId) {
+  ctxTarget = { type: 'node', id: nodeId };
+  const menu = document.getElementById('ctxMenu');
+  menu.style.display = 'block';
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.innerHTML = `
+    <div class="ctx-item" onclick="ctxAction('label')">✏️ Label bearbeiten</div>
+    <div class="ctx-item" onclick="ctxAction('color')">🎨 Farbe ändern</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="ctxAction('duplicate')">📋 Duplizieren</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item red" onclick="ctxAction('delete')">🗑 Löschen</div>`;
+}
+
+function showCtxMenuConn(e, connId) {
+  ctxTarget = { type: 'conn', id: connId };
+  const menu = document.getElementById('ctxMenu');
+  menu.style.display = 'block';
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.innerHTML = `
+    <div class="ctx-item" onclick="ctxActionConn('color')">🎨 Farbe ändern</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item red" onclick="ctxActionConn('delete')">🗑 Verbindung löschen</div>`;
+}
+
+function hideCtxMenu() { document.getElementById('ctxMenu').style.display = 'none'; }
+document.addEventListener('click', hideCtxMenu);
+
+function ctxAction(action) {
+  hideCtxMenu();
+  if (!ctxTarget || ctxTarget.type !== 'node') return;
+  const node = nodes.find(n => n.id === ctxTarget.id);
+  if (!node) return;
+  if (action === 'label') {
+    const inp = document.getElementById('label-' + node.id);
+    if (inp) { inp.focus(); inp.select(); }
+  } else if (action === 'color') {
+    const colors = ['#f97316','#38bdf8','#22c55e','#facc15','#ef4444','#a78bfa','#94a3b8','#64748b','#fb923c'];
+    const c = prompt('Farbe (Hex):', node.color);
+    if (c) {
+      node.color = c;
+      const body = document.getElementById('body-' + node.id);
+      if (body) { body.style.color = c; body.style.borderColor = c; body.style.boxShadow = `0 0 12px ${c}33`; }
+      const inp = document.getElementById('label-' + node.id);
+      if (inp) inp.style.color = c;
+    }
+  } else if (action === 'duplicate') {
+    createNode(node.type, node.x + 32, node.y + 32, node.label);
+  } else if (action === 'delete') {
+    deleteNode(node.id);
+  }
+}
+
+function ctxActionConn(action) {
+  hideCtxMenu();
+  if (!ctxTarget || ctxTarget.type !== 'conn') return;
+  const conn = connections.find(c => c.id === ctxTarget.id);
+  if (!conn) return;
+  if (action === 'delete') {
+    connections = connections.filter(c => c.id !== ctxTarget.id);
+    renderConnections();
+  } else if (action === 'color') {
+    const c = prompt('Farbe (orange/blue/green/red/gray):', conn.color);
+    if (c) { conn.color = c; renderConnections(); }
+  }
+}
+
+function deleteNode(id) {
+  nodes = nodes.filter(n => n.id !== id);
+  connections = connections.filter(c => c.from !== id && c.to !== id);
+  const el = document.getElementById('node-' + id);
+  if (el) el.remove();
+  renderConnections();
+}
+
+// ─── KEYBOARD ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (document.activeElement.tagName === 'INPUT') return;
+    if (selectedNode) { deleteNode(selectedNode); selectedNode = null; }
+  }
+  if (e.key === 'Escape') { connectingFrom = null; clearTempConn(); document.querySelectorAll('.port').forEach(p => p.classList.remove('active')); }
+});
+
+// ─── CLEAR / EXPORT ───────────────────────────────────────────────────────────
+function clearAll() {
+  if (!confirm('Alles löschen?')) return;
+  nodes = []; connections = [];
+  document.getElementById('nodes').innerHTML = '';
+  document.getElementById('connections').innerHTML = '';
+}
+
+function exportJSON() {
+  const data = JSON.stringify({ nodes: nodes.map(n => ({...n})), connections }, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'lager-layout.json'; a.click();
+}
+
+function importJSON() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        clearAll();
+        data.nodes.forEach(n => { nodes.push(n); renderNode(n); if (n.id >= nextId) nextId = n.id+1; });
+        connections = data.connections || [];
+        renderConnections();
+      } catch(err) { alert('Fehler beim Importieren!'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportPNG() {
+  alert('Tipp: Nutze im Browser Strg+P → Als PDF speichern, oder mach einen Screenshot!');
+}
+
+// ─── EXAMPLE ──────────────────────────────────────────────────────────────────
+function loadExample() {
+  if (nodes.length > 0 && !confirm('Aktuelles Layout ersetzen?')) return;
+  clearAll();
+  pan = { x: 0, y: 0 }; drawGrid();
+
+  const m  = createNode('machine',      50,  120);
+  const ci = createNode('conveyer-in', 240,  120);
+  const fi = createNode('frogport-in', 430,  120);
+  const pb = createNode('vault-buffer', 620,  120);
+  const vh = createNode('vault-main',  810,  120);
+
+  const fo = createNode('frogport-out', 430, 280);
+  const co = createNode('conveyer-out', 620, 280);
+  const pl = createNode('player',       810, 280);
+
+  const cp = createNode('comparator',  430, 420);
+  const rs = createNode('redstone',    620, 420);
+  const cl = createNode('clutch',      810, 420);
+
+  setTimeout(() => {
+    connections.push({ id: nextId++, from: m.id,  fromPort: 'right',  to: ci.id, toPort: 'left',   color: 'gray' });
+    connections.push({ id: nextId++, from: ci.id, fromPort: 'right',  to: fi.id, toPort: 'left',   color: 'orange' });
+    connections.push({ id: nextId++, from: fi.id, fromPort: 'right',  to: pb.id, toPort: 'left',   color: 'orange' });
+    connections.push({ id: nextId++, from: pb.id, fromPort: 'right',  to: vh.id, toPort: 'left',   color: 'green' });
+    connections.push({ id: nextId++, from: vh.id, fromPort: 'bottom', to: fo.id, toPort: 'top',    color: 'blue' });
+    connections.push({ id: nextId++, from: fo.id, fromPort: 'right',  to: co.id, toPort: 'left',   color: 'blue' });
+    connections.push({ id: nextId++, from: co.id, fromPort: 'right',  to: pl.id, toPort: 'left',   color: 'blue' });
+    connections.push({ id: nextId++, from: pb.id, fromPort: 'bottom', to: cp.id, toPort: 'top',    color: 'red' });
+    connections.push({ id: nextId++, from: cp.id, fromPort: 'right',  to: rs.id, toPort: 'left',   color: 'red' });
+    connections.push({ id: nextId++, from: rs.id, fromPort: 'right',  to: cl.id, toPort: 'left',   color: 'red' });
+    renderConnections();
+  }, 100);
+}
+</script>
+</body>
+</html>
